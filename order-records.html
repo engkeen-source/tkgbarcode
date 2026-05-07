@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TKG Barcode Ops - Orders & Analytics</title>
+    <title>TKG Barcode Ops - Analytics</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,82 +46,6 @@
         .page-subtitle {
             margin-top: 0.4rem;
             color: var(--text-secondary);
-        }
-
-        .page-tabs {
-            display: flex;
-            gap: 0.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .tab-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 1.05rem;
-            font-weight: 600;
-            padding: 0.7rem 1.4rem;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-            font-family: 'Inter', sans-serif;
-            margin-bottom: -1px;
-        }
-
-        .tab-btn:hover {
-            color: white;
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .tab-btn.active {
-            color: var(--accent);
-            border-bottom: 2px solid var(--accent);
-        }
-
-        .sub-tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .sub-tab-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 0.98rem;
-            font-weight: 600;
-            padding: 0.65rem 1.1rem;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-            font-family: 'Inter', sans-serif;
-            margin-bottom: -1px;
-        }
-
-        .sub-tab-btn:hover {
-            color: white;
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .sub-tab-btn.active {
-            color: var(--accent);
-            border-bottom: 2px solid var(--accent);
-        }
-
-        .tab-section {
-            display: none;
-        }
-
-        .tab-section.active {
-            display: block;
-        }
-
-        .filters-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
         }
 
         .filter-input {
@@ -168,7 +92,6 @@
             background: rgba(0, 0, 0, 0.4);
         }
 
-        .table-container,
         .inventory-table-container {
             background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -201,136 +124,6 @@
 
         tbody tr:hover {
             background: rgba(255, 255, 255, 0.02);
-        }
-
-        .badge {
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            display: inline-block;
-            white-space: nowrap;
-        }
-
-        .badge.complete {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-        }
-
-        .badge.pending {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fbbf24;
-        }
-
-        .badge.shopee {
-            background: rgba(249, 115, 22, 0.15);
-            color: #f97316;
-        }
-
-        .badge.lazada {
-            background: rgba(14, 165, 233, 0.15);
-            color: #38bdf8;
-        }
-
-        .badge.shopify {
-            background: rgba(147, 51, 234, 0.15);
-            color: #c084fc;
-        }
-
-        .badge.tiktok {
-            background: rgba(236, 72, 153, 0.15);
-            color: #f472b6;
-        }
-
-        .badge.other {
-            background: rgba(156, 163, 175, 0.15);
-            color: #9ca3af;
-        }
-
-        .items-cell {
-            color: var(--text-secondary);
-            font-size: 0.85rem;
-        }
-
-        .items-list-expanded {
-            font-size: 0.85rem;
-            margin-top: 0.5rem;
-            color: var(--text-secondary);
-            display: none;
-            list-style-type: none;
-            padding-left: 0;
-        }
-
-        .items-list-expanded li {
-            margin-bottom: 0.25rem;
-        }
-
-        .btn-expand {
-            background: none;
-            border: none;
-            color: var(--accent);
-            cursor: pointer;
-            font-size: 0.8rem;
-            text-decoration: underline;
-            padding: 0;
-            margin-left: 0.5rem;
-        }
-
-        .action-btn {
-            padding: 0.35rem 0.8rem;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            border: 1px solid;
-            font-family: 'Inter', sans-serif;
-            transition: all 0.2s;
-            background: transparent;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .btn-edit {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            border-color: rgba(16, 185, 129, 0.4);
-        }
-
-        .btn-edit:hover {
-            background: rgba(16, 185, 129, 0.25);
-        }
-
-        .btn-cancel {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fbbf24;
-            border-color: rgba(245, 158, 11, 0.4);
-        }
-
-        .btn-cancel:hover {
-            background: rgba(245, 158, 11, 0.25);
-        }
-
-        .btn-delete {
-            background: rgba(239, 68, 68, 0.1);
-            color: #f87171;
-            border-color: rgba(239, 68, 68, 0.4);
-        }
-
-        .btn-delete:hover {
-            background: rgba(239, 68, 68, 0.2);
-        }
-
-        .btn-pod {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 6px;
-            padding: 0.2rem 0.4rem;
-            cursor: pointer;
-            font-size: 0.8rem;
-            margin-left: 0.5rem;
-            color: var(--text-primary);
         }
 
         .stats-grid {
@@ -389,80 +182,18 @@
                 <div class="logo">TKGBarcodeOps</div>
             </div>
             <div>
-                <span style="color: var(--text-secondary);">Orders, history, and live analytics</span>
+                <span style="color: var(--text-secondary);">Live analytics and inventory performance</span>
             </div>
         </header>
 
         <main class="page-container">
             <div class="page-header">
                 <div>
-                    <h1>Orders & Analytics</h1>
-                    <div class="page-subtitle">Unified order records with live reporting</div>
-                </div>
-                <div class="page-tabs">
-                    <button class="tab-btn active" data-section="orders">Orders</button>
-                    <button class="tab-btn" data-section="analytics">Analytics</button>
+                    <h1>Analytics & Reports</h1>
+                    <div class="page-subtitle">Performance insights with live inventory math</div>
                 </div>
             </div>
-
-            <section id="orders-section" class="tab-section active">
-                <div class="sub-tabs">
-                    <button class="sub-tab-btn active" data-order-tab="ecommerce">E-Commerce</button>
-                    <button class="sub-tab-btn" data-order-tab="b2b">Wholesale / B2B</button>
-                </div>
-
-                <div class="filters-bar">
-                    <input type="text" id="search-input" class="filter-input"
-                        placeholder="Search by AWB, Order ID, tracking...">
-                    <select id="status-filter" class="filter-input" style="max-width: 200px;">
-                        <option value="all">All Statuses</option>
-                        <option value="complete">Complete / Exported</option>
-                        <option value="pending">Pending</option>
-                    </select>
-                    <select id="platform-filter" class="filter-input" style="max-width: 160px;">
-                        <option value="all">All Platforms</option>
-                        <option value="shopee">Shopee</option>
-                        <option value="lazada">Lazada</option>
-                        <option value="shopify">Shopify</option>
-                        <option value="tiktok">TikTok</option>
-                        <option value="b2b">B2B / Wholesale</option>
-                    </select>
-                    <select id="delivery-filter" class="filter-input" style="max-width: 160px;">
-                        <option value="all">All Delivery</option>
-                        <option value="spx">SPX Express</option>
-                        <option value="ninjavan">NinjaVan</option>
-                        <option value="singpost">Singpost</option>
-                        <option value="jt">J&amp;T</option>
-                        <option value="b2b">Direct Dispatch</option>
-                    </select>
-                </div>
-
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date / Time</th>
-                                <th>AWB / Tracking</th>
-                                <th>Order ID</th>
-                                <th>Platform</th>
-                                <th>Delivery</th>
-                                <th>Items</th>
-                                <th>Status</th>
-                                <th style="text-align: right;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="records-tbody">
-                            <tr>
-                                <td colspan="8"
-                                    style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                                    Loading records...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <section id="analytics-section" class="tab-section">
+            <section id="analytics-section">
                 <div class="stats-grid">
                     <div class="stat-card" style="border-top: 3px solid #3b82f6;">
                         <span class="stat-title">Total Outbound (Items)</span>

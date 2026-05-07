@@ -42,17 +42,17 @@ window.AppDB = {
         // For our scale, downloading the ledger to sum is instantly fast.
         const { data, error } = await supabaseClient.from('stock_ledger').select('*');
         if (error) throw error;
-        
+
         const inventory = {};
-        
+
         data.forEach(row => {
             const product = canon(row.product_name);
             const expiry = row.expiry || '';
             const isDeduction = row.transaction_type === 'OUTBOUND' || row.transaction_type === 'DEFECT';
             const qty = isDeduction ? -row.qty : row.qty;
-            
+
             if (!inventory[product]) inventory[product] = [];
-            
+
             const existingBatch = inventory[product].find(b => b.expiry === expiry);
             if (existingBatch) {
                 existingBatch.qty += qty;
@@ -60,7 +60,7 @@ window.AppDB = {
                 inventory[product].push({ expiry, qty });
             }
         });
-        
+
         return inventory;
     },
 
@@ -71,7 +71,7 @@ window.AppDB = {
         for (const [productName, rawBatches] of Object.entries(rawInventory)) {
             let positiveBatches = [];
             let negativeOffset = 0;
-            
+
             rawBatches.forEach(b => {
                 if (b.qty > 0) {
                     positiveBatches.push({ expiry: b.expiry, qty: b.qty });
@@ -100,7 +100,7 @@ window.AppDB = {
             }
 
             const finalBatches = positiveBatches.filter(b => b.qty > 0 || !b.expiry);
-            
+
             if (negativeOffset > 0 && finalBatches.length === 0) {
                 finalBatches.push({ expiry: '', qty: 0 });
             }
@@ -132,9 +132,9 @@ window.AppDB = {
                 reference_id: 'INBOUND_SCAN',
                 notes: 'Scanned via Stock Inbound app'
             }));
-            
+
         if (rows.length === 0) return;
-        
+
         const { error } = await supabaseClient.from('stock_ledger').insert(rows);
         if (error) throw error;
     },
@@ -162,7 +162,7 @@ window.AppDB = {
     async consolidateLedger() {
         // 1. Calculate live sum first
         const rawInventory = await this.getLiveInventory();
-        
+
         let forwardRows = [];
         for (const [productName, batches] of Object.entries(rawInventory)) {
             batches.forEach(b => {
@@ -175,7 +175,7 @@ window.AppDB = {
                         reference_id: 'SYSTEM_ROLLUP',
                         notes: 'Ledger Consolidation / Roll-up starting balance'
                     });
-                    
+
                     // If the balance is actually negative, flip type
                     if (b.qty < 0) {
                         forwardRows[forwardRows.length - 1].transaction_type = 'OUTBOUND';
@@ -183,17 +183,17 @@ window.AppDB = {
                 }
             });
         }
-        
+
         // 2. Wipe existing ledger
         const { error: delErr } = await supabaseClient.from('stock_ledger').delete().neq('transaction_type', 'DELETE_ALL_OVERRIDE');
         if (delErr) throw delErr;
-        
+
         // 3. Insert forward balances
         if (forwardRows.length > 0) {
             const { error: insErr } = await supabaseClient.from('stock_ledger').insert(forwardRows);
             if (insErr) throw insErr;
         }
-        
+
         return true;
     },
 
@@ -205,7 +205,7 @@ window.AppDB = {
         // 1. Delete all ledger deductions (restores inventory instantly)
         const { error: ledgErr } = await supabaseClient.from('stock_ledger').delete().eq('reference_id', orderId);
         if (ledgErr) throw ledgErr;
-        
+
         // 2. Delete the order record
         const { error: ordErr } = await supabaseClient.from('orders').delete().eq('id', orderId);
         if (ordErr) throw ordErr;
@@ -215,17 +215,17 @@ window.AppDB = {
         // 1. Delete all ledger deductions (restores inventory instantly)
         const { error: ledgErr } = await supabaseClient.from('stock_ledger').delete().eq('reference_id', orderId);
         if (ledgErr) throw ledgErr;
-        
+
         // 2. Fetch the existing order row
         const { data: orderRow, error: fetchErr } = await supabaseClient.from('orders').select('*').eq('id', orderId).single();
         if (fetchErr || !orderRow) throw new Error("Order not found");
-        
+
         // 3. Update the order_data payload inner status
         const orderData = orderRow.order_data;
         if (orderData) {
             orderData.status = 'Cancelled';
         }
-        
+
         // 4. Update the SQL status and payload
         const { error: updErr } = await supabaseClient.from('orders').update({
             status: 'Cancelled',
@@ -250,7 +250,7 @@ window.AppDB = {
             platform: o.platform || 'unknown',
             order_data: o
         }));
-        
+
         // Upsert orders
         const { error } = await supabaseClient.from('orders').upsert(payload, { onConflict: 'id' });
         if (error) throw error;
@@ -264,11 +264,11 @@ window.AppDB = {
         // 1. Check if the order was already completed in the DB to prevent double outbounds
         const { data: existing } = await supabaseClient.from('orders').select('status').eq('id', orderObj.id).single();
         const wasAlreadyDone = existing && (existing.status === 'Complete' || existing.status === 'Exported');
-        
+
         // 2. Build the exact items to deduct
         if (!wasAlreadyDone && (orderObj.status === 'Complete' || orderObj.status === 'Exported')) {
             const ledgerRows = [];
-            
+
             const processItem = (name, qty, expiry) => {
                 if (qty <= 0) return;
                 ledgerRows.push({
@@ -287,10 +287,10 @@ window.AppDB = {
                     if (isBundle) {
                         line.subItems.forEach(sub => {
                             if (sub.scannedBreakdown && Object.keys(sub.scannedBreakdown).length > 0) {
-                                 for (const [sName, sCount] of Object.entries(sub.scannedBreakdown)) {
-                                     let exp = (sub.selectedBreakdownExpiries && sub.selectedBreakdownExpiries[canon(sName)]) || null;
-                                     processItem(sName, sCount, exp);
-                                 }
+                                for (const [sName, sCount] of Object.entries(sub.scannedBreakdown)) {
+                                    let exp = (sub.selectedBreakdownExpiries && sub.selectedBreakdownExpiries[canon(sName)]) || null;
+                                    processItem(sName, sCount, exp);
+                                }
                             } else {
                                 processItem(sub.name, sub.requiredQty || 0, sub.selectedExpiry);
                             }
@@ -300,7 +300,7 @@ window.AppDB = {
                     }
                 });
             }
-            
+
             // Push ledger deductions!
             if (ledgerRows.length > 0) {
                 const { error: ledgErr } = await supabaseClient.from('stock_ledger').insert(ledgerRows);
@@ -315,8 +315,48 @@ window.AppDB = {
             platform: orderObj.platform || 'unknown',
             order_data: orderObj
         }, { onConflict: 'id' });
-        
+
         if (orderError) throw orderError;
+    },
+
+    async updateOrderData(orderId, updates) {
+        if (!orderId) throw new Error('Order ID required');
+
+        const { data: orderRow, error: fetchErr } = await supabaseClient
+            .from('orders')
+            .select('order_data')
+            .eq('id', orderId)
+            .single();
+
+        if (fetchErr || !orderRow) throw new Error('Order not found');
+
+        const merged = { ...(orderRow.order_data || {}), ...(updates || {}) };
+        const updatePayload = { order_data: merged };
+        if (updates && updates.status) updatePayload.status = updates.status;
+
+        const { error: updErr } = await supabaseClient
+            .from('orders')
+            .update(updatePayload)
+            .eq('id', orderId);
+        if (updErr) throw updErr;
+
+        return merged;
+    },
+
+    subscribeOrders(handler) {
+        if (!supabaseClient || typeof supabaseClient.channel !== 'function') return null;
+        const channel = supabaseClient
+            .channel('orders_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                if (typeof handler === 'function') handler(payload);
+            })
+            .subscribe();
+        return channel;
+    },
+
+    unsubscribe(channel) {
+        if (!supabaseClient || !channel) return;
+        supabaseClient.removeChannel(channel);
     },
 
     // ==========================================
@@ -331,7 +371,7 @@ window.AppDB = {
 
     async insertDefect(defectObj) {
         const cName = canon(defectObj.product);
-        
+
         // Push defect record
         const { error: defErr } = await supabaseClient.from('defects').insert({
             product: cName,
@@ -344,12 +384,12 @@ window.AppDB = {
 
         // Debit out of the stock ledger
         const { error: ledgErr } = await supabaseClient.from('stock_ledger').insert({
-             product_name: cName,
-             transaction_type: 'DEFECT',
-             qty: defectObj.count,
-             expiry: defectObj.expiry || null,
-             reference_id: 'DEFECT_LOG',
-             notes: `Sys Defect: ${defectObj.defectType}`
+            product_name: cName,
+            transaction_type: 'DEFECT',
+            qty: defectObj.count,
+            expiry: defectObj.expiry || null,
+            reference_id: 'DEFECT_LOG',
+            notes: `Sys Defect: ${defectObj.defectType}`
         });
         if (ledgErr) throw ledgErr;
     },
@@ -403,7 +443,7 @@ window.AppDB = {
     async getSetting(key) {
         const { data, error } = await supabaseClient.from('app_settings').select('value').eq('key', key).single();
         if (error && error.code !== 'PGRST116') { // PGRST116 == 0 rows returned
-            throw error; 
+            throw error;
         }
         return data ? data.value : null;
     },

@@ -7,6 +7,7 @@
     <title>Barcode Ops - Import</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="summary-table.css">
+    <link rel="stylesheet" href="importer-orders.css">
     <!-- Using SheetJS for Excel parsing -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,6 +36,9 @@
                             Files</button>
                         <input type="file" id="file-input" accept=".xlsx, .xls, .csv" hidden>
                     </div>
+                    <div class="upload-secondary-actions">
+                        <button class="secondary-btn" id="open-records-btn">Open Order Records</button>
+                    </div>
                 </div>
             </section>
 
@@ -53,74 +57,243 @@
             </section>
             <!-- Dashboard View -->
             <section id="dashboard-view" class="view hidden">
-                <div class="toolbar">
-                    <h2>Orders <span id="order-count" class="badge">0</span></h2>
-                    <div class="toolbar-actions">
-                        <button class="secondary-btn" id="view-summary-btn">View Scanned Summary</button>
-                        <button id="add-shopify-btn" class="secondary-btn"
-                            style="border-color: #9333ea; color: #a855f7;">Add Shopify Order</button>
-                        <button id="add-file-btn" class="secondary-btn">Add Another File</button>
-                        <button id="check-dupes-btn" class="secondary-btn">Check Duplicates</button>
-                        <button id="btn-export-gsheet" class="primary-btn"
-                            style="background-color: #0f9d58; color: white;">Sync
-                            to G-Sheet</button>
-                        <button class="text-btn" id="new-import-btn">New Import</button>
+                <div class="workspace-tabs" id="workspace-tabs">
+                    <button class="workspace-tab active" data-workspace="batch">Batch Orders</button>
+                    <button class="workspace-tab" data-workspace="records">Order Records</button>
+                    <button class="workspace-tab" data-workspace="packing">Packing Station</button>
+                </div>
+
+                <div id="workspace-batch" class="workspace-section active">
+                    <div class="toolbar">
+                        <h2>Batch Orders <span id="order-count" class="badge">0</span></h2>
+                        <div class="toolbar-actions">
+                            <button class="secondary-btn" id="view-summary-btn">View Scanned Summary</button>
+                            <button id="add-shopify-btn" class="secondary-btn"
+                                style="border-color: #9333ea; color: #a855f7;">Add Shopify Order</button>
+                            <button id="add-file-btn" class="secondary-btn">Add Another File</button>
+                            <button id="check-dupes-btn" class="secondary-btn">Check Duplicates</button>
+                            <button id="btn-export-gsheet" class="primary-btn"
+                                style="background-color: #0f9d58; color: white;">Sync
+                                to G-Sheet</button>
+                            <button class="text-btn" id="new-import-btn">New Import</button>
+                        </div>
+                    </div>
+
+                    <!-- Missing Products Alerts -->
+                    <div id="issues-panel" class="hidden"
+                        style="background:#450a0a; border: 1px solid #991b1b; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+                        <h3 style="color: #fecaca; margin-bottom: 0.75rem;">⚠️ Missing Mappings Found</h3>
+                        <p style="color: #fca5a5; font-size: 0.9rem; margin-bottom: 1rem;">The following marketplace
+                            names
+                            were NOT found in the database. Please create links for them in the <a href="admin.html"
+                                style="color:white; text-decoration: underline;">Admin Panel</a>.</p>
+                        <ul id="issues-list"
+                            style="color: #fecaca; font-size: 0.85rem; padding-left: 1.5rem; display: flex; flex-direction: column; gap: 0.25rem;">
+                            <!-- Missing names list -->
+                        </ul>
+                    </div>
+
+                    <!-- Carrier Tally Stats -->
+                    <div id="stats-panel" class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-title">Ninja Van</div>
+                            <div class="stat-value" id="count-ninja">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">SPX</div>
+                            <div class="stat-value" id="count-spx">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title" style="color: #a855f7;">Shopify</div>
+                            <div class="stat-value" id="count-shopify">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">Other</div>
+                            <div class="stat-value" id="count-other">0</div>
+                        </div>
+                        <div class="stat-card total">
+                            <div class="stat-title">Total Orders</div>
+                            <div class="stat-value" id="count-total">0</div>
+                        </div>
+                    </div>
+
+
+                    <div class="table-wrapper">
+                        <table id="orders-table">
+                            <thead>
+                                <tr>
+                                    <th>AWB / Tracking</th>
+                                    <th>Order ID</th>
+                                    <th>Items</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-list">
+                                <!-- Rows injected via JS -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- Missing Products Alerts -->
-                <div id="issues-panel" class="hidden"
-                    style="background:#450a0a; border: 1px solid #991b1b; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-                    <h3 style="color: #fecaca; margin-bottom: 0.75rem;">⚠️ Missing Mappings Found</h3>
-                    <p style="color: #fca5a5; font-size: 0.9rem; margin-bottom: 1rem;">The following marketplace
-                        names
-                        were NOT found in the database. Please create links for them in the <a href="admin.html"
-                            style="color:white; text-decoration: underline;">Admin Panel</a>.</p>
-                    <ul id="issues-list"
-                        style="color: #fecaca; font-size: 0.85rem; padding-left: 1.5rem; display: flex; flex-direction: column; gap: 0.25rem;">
-                        <!-- Missing names list -->
-                    </ul>
+                <div id="workspace-records" class="workspace-section">
+                    <div class="workspace-header">
+                        <div>
+                            <h2>Order Records</h2>
+                            <p class="workspace-subtitle">Historical orders with full filters, edits, and POD support.
+                            </p>
+                        </div>
+                        <div class="workspace-actions">
+                            <button class="secondary-btn" id="records-refresh-btn">Refresh</button>
+                        </div>
+                    </div>
+
+                    <div class="records-panel">
+                        <div class="records-tabs">
+                            <button class="records-tab active" data-records-tab="ecommerce">E-Commerce</button>
+                            <button class="records-tab" data-records-tab="b2b">B2B / Wholesale</button>
+                        </div>
+
+                        <div class="records-filters">
+                            <input type="text" id="records-search-input" class="filter-input"
+                                placeholder="Search by AWB, Order ID, tracking...">
+                            <select id="records-status-filter" class="filter-input" style="max-width: 200px;">
+                                <option value="all">All Statuses</option>
+                                <option value="complete">Complete / Exported</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                            <select id="records-platform-filter" class="filter-input" style="max-width: 160px;">
+                                <option value="all">All Platforms</option>
+                                <option value="shopee">Shopee</option>
+                                <option value="lazada">Lazada</option>
+                                <option value="shopify">Shopify</option>
+                                <option value="tiktok">TikTok</option>
+                                <option value="b2b">B2B / Wholesale</option>
+                            </select>
+                            <select id="records-delivery-filter" class="filter-input" style="max-width: 160px;">
+                                <option value="all">All Delivery</option>
+                                <option value="spx">SPX Express</option>
+                                <option value="ninjavan">NinjaVan</option>
+                                <option value="singpost">Singpost</option>
+                                <option value="jt">J&amp;T</option>
+                                <option value="b2b">Direct Dispatch</option>
+                            </select>
+                        </div>
+
+                        <div class="records-table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date / Time</th>
+                                        <th>AWB / Tracking</th>
+                                        <th>Order ID</th>
+                                        <th>Platform</th>
+                                        <th>Delivery</th>
+                                        <th>Items</th>
+                                        <th>Status</th>
+                                        <th style="text-align: right;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="records-tbody">
+                                    <tr>
+                                        <td colspan="8"
+                                            style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                            Loading records...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Carrier Tally Stats -->
-                <div id="stats-panel" class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-title">Ninja Van</div>
-                        <div class="stat-value" id="count-ninja">0</div>
+                <div id="workspace-packing" class="workspace-section">
+                    <div class="workspace-header">
+                        <div>
+                            <h2>Packing Station</h2>
+                            <p class="workspace-subtitle">Scan airway bills with a USB barcode scanner to load the packing checklist.</p>
+                        </div>
+                        <div class="workspace-actions">
+                            <button class="secondary-btn" id="packing-refresh-btn">Refresh Orders</button>
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-title">SPX</div>
-                        <div class="stat-value" id="count-spx">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-title" style="color: #a855f7;">Shopify</div>
-                        <div class="stat-value" id="count-shopify">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-title">Other</div>
-                        <div class="stat-value" id="count-other">0</div>
-                    </div>
-                    <div class="stat-card total">
-                        <div class="stat-title">Total Orders</div>
-                        <div class="stat-value" id="count-total">0</div>
-                    </div>
-                </div>
 
+                    <div class="packing-grid">
+                        <div class="packing-scan-card">
+                            <div class="scan-card-header">
+                                <h3>Scan Airway Bill</h3>
+                                <span id="packing-scanner-indicator" class="scanner-indicator ready">● Ready</span>
+                            </div>
 
-                <div class="table-wrapper">
-                    <table id="orders-table">
-                        <thead>
-                            <tr>
-                                <th>AWB / Tracking</th>
-                                <th>Order ID</th>
-                                <th>Items</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="orders-list">
-                            <!-- Rows injected via JS -->
-                        </tbody>
-                    </table>
+                            <div class="scanner-input-zone" id="scanner-input-zone">
+                                <div class="scanner-zone-icon">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 5h2M7 5h1M11 5h3M17 5h1M21 5h-2M3 19h2M7 19h1M11 19h3M17 19h1M21 19h-2M3 9v6M21 9v6"/>
+                                        <rect x="7" y="9" width="1" height="6"/><rect x="11" y="9" width="2" height="6"/><rect x="16" y="9" width="1" height="6"/>
+                                    </svg>
+                                </div>
+                                <div class="scanner-zone-label">Ready to Scan</div>
+                                <input
+                                    type="text"
+                                    id="awb-scanner-input"
+                                    class="scanner-field"
+                                    placeholder="Waiting for barcode scanner..."
+                                    autocomplete="off"
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    inputmode="none"
+                                >
+                                <p class="scanner-hint">Point your USB barcode scanner at the airway bill label and scan. The field captures input automatically — no button click needed.</p>
+                            </div>
+
+                            <div id="awb-scan-status" class="scan-status"></div>
+
+                            <div class="scanner-last-scan" id="scanner-last-scan" style="display:none;">
+                                <span class="scanner-last-label">Last scan:</span>
+                                <span id="scanner-last-value" class="scanner-last-value"></span>
+                            </div>
+                        </div>
+
+                        <div class="packing-card" id="packing-card">
+                            <div class="packing-empty" id="packing-empty">
+                                <h3>No order loaded</h3>
+                                <p>Scan an airway bill or enter a tracking number to load the packing checklist.</p>
+                            </div>
+
+                            <div class="packing-order hidden" id="packing-order">
+                                <div class="packing-order-header">
+                                    <div>
+                                        <h3 id="packing-order-title">Order</h3>
+                                        <p id="packing-customer-name" class="packing-subtitle">Customer</p>
+                                    </div>
+                                    <div class="packing-status-group">
+                                        <span class="status-pill" id="packing-platform-pill">Platform</span>
+                                        <span class="status-pill pending" id="packing-status-pill">Pending</span>
+                                    </div>
+                                </div>
+                                <div class="packing-meta">
+                                    <div class="packing-meta-item">
+                                        <span class="label">Airway Bill</span>
+                                        <span id="packing-awb">-</span>
+                                    </div>
+                                    <div class="packing-meta-item">
+                                        <span class="label">Order ID</span>
+                                        <span id="packing-order-id">-</span>
+                                    </div>
+                                    <div class="packing-meta-item">
+                                        <span class="label">Last Updated</span>
+                                        <span id="packing-updated">-</span>
+                                    </div>
+                                </div>
+                                <div class="packing-progress" id="packing-progress">0 of 0 packed</div>
+                                <div id="packing-items" class="packing-items"></div>
+                                <div class="packing-actions">
+                                    <button class="secondary-btn" id="packing-mark-all">Mark All Packed</button>
+                                    <button class="secondary-btn" id="packing-print">Print Packing Slip</button>
+                                    <button class="primary-btn" id="packing-complete" disabled>Complete Packing</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
@@ -214,6 +387,7 @@
     <script src="products.js"></script>
     <script src="supabase-db.js"></script>
     <script src="script.js"></script>
+    <script src="orders-workbench.js"></script>
 </body>
 
 </html>

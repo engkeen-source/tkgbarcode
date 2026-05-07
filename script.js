@@ -78,7 +78,7 @@ const app = {
         // Fetch Live Inventory once for Expiry Dropdowns
         try {
             this.inventory = await window.AppDB.getComputedInventory();
-        } catch(e) {
+        } catch (e) {
             console.error("Failed to load inventory for script init", e);
             this.inventory = {};
         }
@@ -1103,6 +1103,11 @@ const app = {
             return;
         }
 
+        if (window.orderWorkbench && typeof window.orderWorkbench.isPackingActive === 'function' && window.orderWorkbench.isPackingActive()) {
+            const handled = window.orderWorkbench.handleAwbScan(cleanCode);
+            if (handled) return;
+        }
+
         const order = this.state.orders.find(o =>
             String(o.awb).includes(cleanCode) ||
             String(o.orderId).includes(cleanCode)
@@ -1681,7 +1686,7 @@ const app = {
         if (this.state.currentOrder) {
             const order = this.state.currentOrder;
             const originalStatus = order.status;
-            
+
             // Optimistic rendering
             order.status = 'Complete';
             this.renderDashboard();
@@ -1690,9 +1695,9 @@ const app = {
             try {
                 await window.AppDB.fulfillOrder(order);
                 this.saveState(); // SAVE completion logic to local queue state
-                
+
                 // Refresh local inventory cache after a successful deduction so dropdowns stay accurate natively
-                this.inventory = await window.AppDB.getComputedInventory(); 
+                this.inventory = await window.AppDB.getComputedInventory();
             } catch (e) {
                 alert("Failed to submit order to Cloud Ledger: " + e.message);
                 order.status = originalStatus; // Rollback Optimistic UI
