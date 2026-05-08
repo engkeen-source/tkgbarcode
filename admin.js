@@ -685,6 +685,7 @@ function renderProductForm(p = null) {
             <div style="display:flex; gap:1rem; margin-top:1rem;">
                 <button class="btn btn-primary" style="flex:1; padding:1rem;" onclick="handleSaveProduct()">Save Product Settings</button>
                 <button class="btn btn-secondary" style="padding:1rem;" onclick="closeModal()">Cancel</button>
+                ${p ? `<button class="btn" style="padding:1rem; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.4);" onclick="handleDeleteProduct('${p.name.replace(/'/g, "\\'")}')">🗑 Delete</button>` : ''}
             </div>
         </div>
     `;
@@ -727,6 +728,36 @@ function renderRecipeItems() {
             <button onclick="removeRecipeItem(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer;">✕</button>
         </div>
     `).join('');
+}
+
+function handleDeleteProduct(name) {
+    const product = masterDB.products[name];
+    if (!product) return;
+
+    // Check if any other products use this as a base (parent of variants)
+    const dependents = Object.values(masterDB.products).filter(p => p.baseProduct === name);
+    if (dependents.length > 0) {
+        const depNames = dependents.map(p => p.name).join('\n  • ');
+        alert(`Cannot delete "${name}" — it is the parent of these variants:\n\n  • ${depNames}\n\nDelete or reassign those variants first.`);
+        return;
+    }
+
+    // Check if any bundles/giftboxes contain this product
+    const usedIn = Object.values(masterDB.products).filter(p =>
+        p.contents && p.contents.some(c => c.name === name)
+    );
+    if (usedIn.length > 0) {
+        const usedNames = usedIn.map(p => p.name).join('\n  • ');
+        if (!confirm(`"${name}" is used inside these bundles/gift boxes:\n\n  • ${usedNames}\n\nDelete anyway?`)) return;
+    } else {
+        if (!confirm(`Delete "${name}" permanently? This cannot be undone.`)) return;
+    }
+
+    delete masterDB.products[name];
+    saveMasterSystem();
+    closeModal();
+    renderInventory();
+    if (currentSection === 'giftboxes') renderRecipes();
 }
 
 function handleSaveProduct() {
