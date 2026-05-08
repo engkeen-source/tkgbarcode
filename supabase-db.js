@@ -28,6 +28,90 @@ const canon = (name) => window.formatProductName ? window.formatProductName(name
 
 window.AppDB = {
 
+    async getOrders() {
+        const { data, error } = await supabaseClient
+            .from('orders')
+            .select('id, status, platform, awb, created_at, order_data')
+            .order('created_at', { ascending: false })
+            .limit(200);
+
+        if (error) throw error;
+
+        // Unwrap: return the order_data blob (what the rest of your app expects)
+        // but enrich it with the top-level DB columns so AWB/platform are always present.
+        return (data || []).map(row => ({
+            ...(row.order_data || {}),
+            id: row.id,
+            status: row.status,
+            platform: row.platform || row.order_data?.platform,
+            awb: row.awb || row.order_data?.awb || row.order_data?.trackingNumber,
+            _createdAt: row.created_at
+        }));
+    },
+
+    /**
+     * getOrdersPaginated()
+     * For the Records tab when you have lots of orders.
+     * Calls the RPC you created in the SQL migration.
+     */
+    async getOrdersPaginated(limit = 50, offset = 0, status = null, platform = null) {
+        const { data, error } = await supabaseClient.rpc('get_orders_paginated', {
+            p_limit: limit,
+            p_offset: offset,
+            p_status: status,
+            p_platform: platform
+        });
+
+        if (error) throw error;
+
+        return (data || []).map(row => ({
+            ...(row.order_data || {}),
+            id: row.id,
+            status: row.status,
+            platform: row.platform || row.order_data?.platform,
+            awb: row.awb || row.order_data?.awb || row.order_data?.trackingNumber,
+            _createdAt: row.created_at
+        }));
+    },
+
+    /**
+     * findOrderByBarcode()
+     * ─────────────────────────────────────────────────────────────
+     * THIS is what the packing station scanner calls on every scan.
+     * Uses the Supabase RPC + database index — one fast query,
+     * no client-side looping through all orders.
+     *
+     * @param {string} scannedValue  Raw value from the barcode scanner
+     * @returns {object|null}        Order object or null if not found
+     */
+    async findOrderByBarcode(scannedValue) {
+        if (!scannedValue) return null;
+
+        // Normalize exactly the same way orders-workbench.js does
+        const normalized = String(scannedValue).replace(/[^a-z0-9]/gi, '').toUpperCase();
+        if (!normalized) return null;
+
+        const { data, error } = await supabaseClient
+            .rpc('find_order_by_identifier', { identifier: normalized });
+
+        if (error) {
+            console.error('findOrderByBarcode RPC error:', error);
+            return null;
+        }
+
+        if (!data || data.length === 0) return null;
+
+        const row = data[0];
+        return {
+            ...(row.order_data || {}),
+            id: row.id,
+            status: row.status,
+            platform: row.platform || row.order_data?.platform,
+            awb: row.awb || row.order_data?.awb || row.order_data?.trackingNumber,
+            _createdAt: row.created_at
+        };
+    },
+
     // ==========================================
     // INVENTORY & LEDGER METHODS
     // ==========================================

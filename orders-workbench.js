@@ -1186,14 +1186,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return true;
             }
 
-            const order = orderService.findByIdentifier(normalized);
+            let order = orderService.findByIdentifier(normalized);   // check cache first
             if (!order) {
-                this.setStatus(`No order matched "${rawValue}". Check the barcode and try again.`, 'error');
-                this._setIndicator('error');
-                this.currentOrder = null;
-                this.renderEmpty();
-                setTimeout(() => this._focusScannerInput(), 300);
-                return true;
+                // Not in cache — hit the database directly (fast indexed lookup)
+                order = await window.AppDB.findOrderByBarcode(rawValue);
+                if (order) {
+                    // Add to local cache so subsequent scans of same AWB are instant
+                    orderService.orders.push(order);
+                }
             }
 
             this.currentOrder = order;
