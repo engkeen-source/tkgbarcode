@@ -217,7 +217,9 @@
             padding: 4px;
         }
 
-        .product-details { flex: 1; }
+        .product-details {
+            flex: 1;
+        }
 
         .product-name {
             font-weight: 700;
@@ -266,7 +268,9 @@
             transition: background 0.2s;
         }
 
-        .control-btn:hover { background: var(--accent); }
+        .control-btn:hover {
+            background: var(--accent);
+        }
 
         .low-stock {
             border-color: rgba(239, 68, 68, 0.4) !important;
@@ -278,9 +282,20 @@
         }
 
         @keyframes pulseDot {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
         }
 
         .low-stock-badge {
@@ -423,7 +438,9 @@
         }
 
         @media (max-width: 900px) {
-            .inbound-container { grid-template-columns: 1fr; }
+            .inbound-container {
+                grid-template-columns: 1fr;
+            }
         }
 
         .main-panel {
@@ -480,7 +497,9 @@
             outline: none;
         }
 
-        .input-field:focus { border-color: var(--accent); }
+        .input-field:focus {
+            border-color: var(--accent);
+        }
 
         .scanned-item {
             background: rgba(0, 0, 0, 0.2);
@@ -494,7 +513,9 @@
             gap: 1rem;
         }
 
-        .item-meta { flex: 1; }
+        .item-meta {
+            flex: 1;
+        }
 
         .item-name {
             font-weight: 600;
@@ -574,7 +595,10 @@
             align-items: center;
         }
 
-        .modal-header h2 { margin: 0; font-size: 1.25rem; }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+        }
 
         .modal-close {
             background: none;
@@ -586,7 +610,9 @@
             line-height: 1;
         }
 
-        .modal-close:hover { color: var(--text-primary); }
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
 
         .modal-body {
             padding: 1.5rem;
@@ -605,7 +631,8 @@
             </div>
             <div class="header-actions" id="header-actions">
                 <button class="primary-btn" id="inv-save-btn" style="background: var(--success);">Save Changes</button>
-                <button class="primary-btn" id="inb-save-btn" style="background: var(--success); display:none;" onclick="saveData()">💾 Log & Sync Stock</button>
+                <button class="primary-btn" id="inb-save-btn" style="background: var(--success); display:none;"
+                    onclick="saveData()">💾 Log & Sync Stock</button>
             </div>
         </header>
 
@@ -640,29 +667,38 @@
                 <div class="main-panel">
                     <div class="glass-card">
                         <h3 class="card-title">Barcode Scanner</h3>
-                        <p style="color:var(--text-secondary); margin-bottom:1rem; font-size: 0.9rem;">Scan barcodes below. Matched products from the master database will be recognised automatically and placed in holding until you sync.</p>
+                        <p style="color:var(--text-secondary); margin-bottom:1rem; font-size: 0.9rem;">Scan barcodes
+                            below. Matched products from the master database will be recognised automatically and placed
+                            in holding until you sync.</p>
                         <textarea id="scanArea" placeholder="Scan barcodes here (press Enter)..."></textarea>
                         <div style="display:flex; gap: 1rem; margin-top: 1rem;">
-                            <button class="secondary-btn" onclick="if(confirm('Clear scanned items hold?')) { scanned=[]; persistScans(); updateList(); }" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">✕ Clear Hold</button>
+                            <button class="secondary-btn"
+                                onclick="if(confirm('Clear scanned items hold?')) { scanned=[]; persistScans(); updateList(); }"
+                                style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">✕ Clear
+                                Hold</button>
                         </div>
                     </div>
 
                     <div class="glass-card">
                         <h3 class="card-title">Add Unknown Barcode</h3>
-                        <p style="color:var(--text-secondary); margin-bottom:1rem; font-size: 0.9rem;">If a newly scanned item returns "Unknown", you can teach the inbound system its temporary name.</p>
+                        <p style="color:var(--text-secondary); margin-bottom:1rem; font-size: 0.9rem;">If a newly
+                            scanned item returns "Unknown", you can teach the inbound system its temporary name.</p>
                         <input type="text" id="newBarcode" class="input-field" placeholder="Scan or type barcode...">
                         <input type="text" id="newName" class="input-field" placeholder="Product Name...">
-                        <button class="primary-btn" style="width:100%;" onclick="addBarcode()">➕ Link Temporary Barcode</button>
+                        <button class="primary-btn" style="width:100%;" onclick="addBarcode()">➕ Link Temporary
+                            Barcode</button>
                     </div>
                 </div>
 
                 <aside class="glass-card" style="display: flex; flex-direction: column;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
                         <h3 class="card-title" style="margin:0;">Pending Stock</h3>
-                        <div style="background:var(--accent); color:#fff; font-weight:800; padding:2px 8px; border-radius:12px; font-size:0.9rem;" id="count">0</div>
+                        <div style="background:var(--accent); color:#fff; font-weight:800; padding:2px 8px; border-radius:12px; font-size:0.9rem;"
+                            id="count">0</div>
                     </div>
                     <div id="list" style="flex:1; overflow-y:auto; padding-right:5px;">
-                        <div style="text-align:center; color:var(--text-secondary); margin-top: 2rem;">No items scanned yet</div>
+                        <div style="text-align:center; color:var(--text-secondary); margin-top: 2rem;">No items scanned
+                            yet</div>
                     </div>
                 </aside>
             </main>
@@ -678,8 +714,12 @@
             </div>
             <div class="modal-body">
                 <div class="batches-container" id="modal-batches-container"></div>
-                <div id="modal-dynamic-info" style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-secondary); background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;"></div>
-                <button class="secondary-btn" id="modal-add-batch-btn" style="margin-top: 1rem; width: 100%; font-size: 0.9rem; padding: 0.75rem;">+ Add Expiry Batch</button>
+                <div id="modal-dynamic-info"
+                    style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-secondary); background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                </div>
+                <button class="secondary-btn" id="modal-add-batch-btn"
+                    style="margin-top: 1rem; width: 100%; font-size: 0.9rem; padding: 0.75rem;">+ Add Expiry
+                    Batch</button>
             </div>
         </div>
     </div>
@@ -706,21 +746,21 @@
     <script>
         // --- TAB SWITCHER ---
         function switchTab(tab, btn) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
 
-    document.getElementById('tab-' + tab).classList.add('active');
-    btn.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+            btn.classList.add('active');
 
-    // Show/hide buttons without destroying them
-    document.getElementById('inv-save-btn').style.display = tab === 'inventory' ? 'inline-flex' : 'none';
-    document.getElementById('inb-save-btn').style.display = tab === 'inbound' ? 'inline-flex' : 'none';
+            // Show/hide buttons without destroying them
+            document.getElementById('inv-save-btn').style.display = tab === 'inventory' ? 'inline-flex' : 'none';
+            document.getElementById('inb-save-btn').style.display = tab === 'inbound' ? 'inline-flex' : 'none';
 
-    // Re-render inventory when switching back to inventory tab
-    if (tab === 'inventory' && window._inventoryApp) {
-        window._inventoryApp.loadInventory();
-    }
-}
+            // Re-render inventory when switching back to inventory tab
+            if (tab === 'inventory' && window._inventoryApp) {
+                window._inventoryApp.loadInventory();
+            }
+        }
 
         // --- INBOUND LOGIC ---
         let scanned = [];
@@ -742,16 +782,16 @@
         }
 
         window.addEventListener('load', async () => {
-    await loadOverrides();
-    updateList();
+            await loadOverrides();
+            updateList();
 
-    // Force inventory to reload after page is fully ready
-    setTimeout(async () => {
-        if (window._inventoryApp) {
-            await window._inventoryApp.loadInventory();
-        }
-    }, 500);
-});
+            // Force inventory to reload after page is fully ready
+            setTimeout(async () => {
+                if (window._inventoryApp) {
+                    await window._inventoryApp.loadInventory();
+                }
+            }, 500);
+        });
 
 
         let localMap = JSON.parse(localStorage.getItem("tkg_inbound_productMap")) || {};
