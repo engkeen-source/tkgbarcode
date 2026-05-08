@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.extractProducts();
             this.initChart();
             this.updateChart();
+            this.loadStockReports();
         },
 
         canonName(n) {
@@ -103,9 +104,30 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         processData() {
-            this.productStats = {};
+    this.productStats = {};
 
-            const initProduct = (rawName) => {
+    // Pre-seed ALL known single products from catalog
+    // so products with zero activity still appear in the table
+    if (typeof PRODUCT_CATALOG !== 'undefined') {
+        for (const category in PRODUCT_CATALOG) {
+            if (category === 'Aliases' || category === 'Merchandise' || category === 'Gift Box Barcodes') continue;
+            for (const productName in PRODUCT_CATALOG[category]) {
+                const product = PRODUCT_CATALOG[category][productName];
+                if (product.type !== 'single') continue;
+                const name = this.canonName(productName);
+                if (!this.productStats[name]) {
+                    this.productStats[name] = {
+                        inbound: 0,
+                        outbound: 0,
+                        defects: 0,
+                        monthlyOutbound: {}
+                    };
+                }
+            }
+        }
+    }
+
+    const initProduct = (rawName) => {
                 const name = this.canonName(rawName);
                 if (!this.productStats[name]) {
                     this.productStats[name] = {
@@ -267,9 +289,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             productRows.forEach((row) => {
                 const tr = document.createElement('tr');
-                const lowStockClass = row.dynStock < 10 && row.inbound > 0
-                    ? 'color: var(--danger); font-weight: bold;'
-                    : '';
+                const lowStockClass = row.dynStock < 10
+                ? 'color: var(--danger); font-weight: bold;'
+                : '';
                 const safeName = row.name.replace(/'/g, "\\'");
                 const displayName = window.formatProductName ? window.formatProductName(row.name) : row.name;
                 const linkedName = `<a onclick="window.analyticsApp.selectChartProduct('${safeName}')" style="cursor:pointer;color:var(--accent);text-decoration:underline;font-weight:500;">${this.escapeHtml(displayName)}</a>`;
@@ -433,7 +455,308 @@ document.addEventListener('DOMContentLoaded', () => {
                 '"': '&quot;',
                 "'": '&#39;'
             }[char]));
+        },
+
+        async loadStockReports() {
+            try {
+                const liveInventory = await window.AppDB.getLiveInventory();
+                this.renderLowStockReport(liveInventory);
+                this.renderExpiringReport(liveInventory);
+
+                const expiryFilter = document.getElementById('expiry-filter');
+                if (expiryFilter) {
+                    expiryFilter.onchange = () => this.renderExpiringReport(liveInventory);
+                }
+            } catch (e) {
+                console.error('Failed to load stock reports', e);
+            }
+        },
+
+        getComputedBatches(rawBatches) {
+            let positiveBatches = [];
+            let negativeOffset = 0;
+
+            (rawBatches || []).forEach(b => {
+                if (b.qty > 0) positiveBatches.push({ expiry: b.expiry, qty: b.qty });
+                else if (b.qty < 0) negativeOffset += Math.abs(b.qty);
+            });
+
+            positiveBatches.sort((a, b) => {
+                if (!a.expiry && !b.expiry) return 0;
+                if (!a.expiry) return 1;
+                if (!b.expiry) return -1;
+                return new Date(a.expiry) - new Date(b.expiry);
+            });
+
+            for (let i = 0; i < positiveBatches.length; i++) {
+                if (negativeOffset <= 0) break;
+                const b = positiveBatches[i];
+                if (b.qty >= negativeOffset) { b.qty -= negativeOffset; negativeOffset = 0; }
+                else { negativeOffset -= b.qty; b.qty = 0; }
+            }
+
+            return positiveBatches.filter(b => b.qty > 0);
+        },
+
+        renderLowStockReport(liveInventory) {
+    const tbody = document.getElementById('low-stock-tbody');
+    if (!tbody) return;
+
+    const lowItems = [];
+    const seen = new Set();
+
+    if (typeof PRODUCT_CATALOG !== 'undefined') {
+        for (const category in PRODUCT_CATALOG) {
+            if (category === 'Aliases' || category === 'Merchandise' || category === 'Gift Box Barcodes') continue;
+            for (const productName in PRODUCT_CATALOG[category]) {
+                if (seen.has(productName)) continue;
+                seen.add(productName);
+
+                const product = PRODUCT_CATALOG[category][productName];
+                if (product.type !== 'single') continue;
+
+                const rawBatches = liveInventory[productName] || [];
+                const batches = this.getComputedBatches(rawBatches);
+                const total = batches.reduce((sum, b) => sum + b.qty, 0);
+
+                if (total < 10) {
+                    lowItems.push({ name: productName, stock: total });
+                }
+            }
         }
+    } else {
+        for (const [productName, rawBatches] of Object.entries(liveInventory)) {
+            const batches = this.getComputedBatches(rawBatches);
+            const total = batches.reduce((sum, b) => sum + b.qty, 0);
+            if (total < 10) lowItems.push({ name: productName, stock: total });
+        }
+    }
+
+    lowItems.sort((a, b) => a.stock - b.stock);
+
+    const lowCountStat = document.getElementById('low-stock-count-stat');
+    if (lowCountStat) lowCountStat.textContent = lowItems.length;
+
+    // --- CHART ---
+    const canvas = document.getElementById('lowStockChart');
+    if (canvas) {
+        if (this.lowStockChartInstance) this.lowStockChartInstance.destroy();
+
+        const labels = lowItems.map(i => window.formatProductName ? window.formatProductName(i.name) : i.name);
+        const data = lowItems.map(i => i.stock);
+        const colors = lowItems.map(i => i.stock === 0 ? 'rgba(239,68,68,0.8)' : 'rgba(245,158,11,0.8)');
+        const borderColors = lowItems.map(i => i.stock === 0 ? '#ef4444' : '#f59e0b');
+
+        this.lowStockChartInstance = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Current Stock',
+                        data,
+                        backgroundColor: colors,
+                        borderColor: borderColors,
+                        borderWidth: 1,
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Low Stock Threshold (10)',
+                        data: new Array(lowItems.length).fill(10),
+                        type: 'line',
+                        borderColor: 'rgba(255,255,255,0.3)',
+                        borderDash: [6, 4],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: 'rgba(255,255,255,0.7)', font: { family: "'Inter', sans-serif" } }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fbbf24',
+                        padding: 10
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: 'rgba(255,255,255,0.7)', maxRotation: 45, font: { size: 11 } },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- TABLE ---
+    if (lowItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--success); padding:2rem;">✅ All products are sufficiently stocked!</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = lowItems.map(item => {
+        const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
+        const statusColor = item.stock === 0 ? 'var(--danger)' : '#f59e0b';
+        const statusText = item.stock === 0 ? '🔴 Out of Stock' : '🟡 Low Stock';
+        return `
+            <tr>
+                <td style="font-weight:600;">${this.escapeHtml(displayName)}</td>
+                <td style="text-align:center; font-size:1.2rem; font-weight:800; color:${statusColor};">${item.stock}</td>
+                <td style="text-align:center;">
+                    <span style="padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:600; background:${item.stock === 0 ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)'}; color:${statusColor};">
+                        ${statusText}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+},
+
+        renderExpiringReport(liveInventory) {
+    const tbody = document.getElementById('expiring-tbody');
+    if (!tbody) return;
+
+    const filterVal = document.getElementById('expiry-filter')?.value;
+    const now = new Date();
+    const expiringItems = [];
+
+    for (const [productName, rawBatches] of Object.entries(liveInventory)) {
+        const batches = this.getComputedBatches(rawBatches);
+        batches.forEach(batch => {
+            if (!batch.expiry) return;
+            const expDate = new Date(batch.expiry);
+            if (isNaN(expDate)) return;
+
+            const daysLeft = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
+            if (filterVal !== 'all' && daysLeft > parseInt(filterVal)) return;
+
+            expiringItems.push({ name: productName, expiry: batch.expiry, qty: batch.qty, daysLeft });
+        });
+    }
+
+    expiringItems.sort((a, b) => a.daysLeft - b.daysLeft);
+
+    const expCountStat = document.getElementById('expiring-count-stat');
+    if (expCountStat) {
+        expCountStat.textContent = expiringItems.filter(i => i.daysLeft <= 30).length;
+    }
+
+    // --- CHART ---
+    const canvas = document.getElementById('expiringChart');
+    if (canvas) {
+        if (this.expiringChartInstance) this.expiringChartInstance.destroy();
+
+        // Group by urgency buckets
+        const buckets = { 'Expired': 0, 'Critical (≤7d)': 0, 'Expiring Soon (≤30d)': 0, 'OK (>30d)': 0 };
+        expiringItems.forEach(item => {
+            if (item.daysLeft <= 0) buckets['Expired'] += item.qty;
+            else if (item.daysLeft <= 7) buckets['Critical (≤7d)'] += item.qty;
+            else if (item.daysLeft <= 30) buckets['Expiring Soon (≤30d)'] += item.qty;
+            else buckets['OK (>30d)'] += item.qty;
+        });
+
+        const bucketColors = {
+            'Expired': 'rgba(239,68,68,0.8)',
+            'Critical (≤7d)': 'rgba(239,68,68,0.5)',
+            'Expiring Soon (≤30d)': 'rgba(245,158,11,0.8)',
+            'OK (>30d)': 'rgba(16,185,129,0.8)'
+        };
+
+        const bucketBorders = {
+            'Expired': '#ef4444',
+            'Critical (≤7d)': '#ef4444',
+            'Expiring Soon (≤30d)': '#f59e0b',
+            'OK (>30d)': '#10b981'
+        };
+
+        this.expiringChartInstance = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(buckets),
+                datasets: [{
+                    label: 'Total Qty',
+                    data: Object.values(buckets),
+                    backgroundColor: Object.keys(buckets).map(k => bucketColors[k]),
+                    borderColor: Object.keys(buckets).map(k => bucketBorders[k]),
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fbbf24',
+                        padding: 10,
+                        callbacks: {
+                            label: ctx => `${ctx.parsed.y} units`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 12 } },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- TABLE ---
+    if (expiringItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--success); padding:2rem;">✅ No products expiring in this timeframe!</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = expiringItems.map(item => {
+        const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
+        const expDateStr = new Date(item.expiry).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+        let statusColor, statusText;
+        if (item.daysLeft <= 0) { statusColor = 'var(--danger)'; statusText = '🔴 Expired'; }
+        else if (item.daysLeft <= 7) { statusColor = 'var(--danger)'; statusText = '🔴 Critical'; }
+        else if (item.daysLeft <= 30) { statusColor = '#f59e0b'; statusText = '🟡 Expiring Soon'; }
+        else { statusColor = '#10b981'; statusText = '🟢 OK'; }
+
+        return `
+            <tr>
+                <td style="font-weight:600;">${this.escapeHtml(displayName)}</td>
+                <td style="text-align:center; color:${statusColor}; font-weight:600;">${expDateStr}</td>
+                <td style="text-align:center; font-weight:700;">${item.qty}</td>
+                <td style="text-align:center; color:${statusColor}; font-weight:700;">${item.daysLeft <= 0 ? 'Expired' : item.daysLeft + ' days'}</td>
+                <td style="text-align:center;">
+                    <span style="padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:600; background:${item.daysLeft <= 7 ? 'rgba(239,68,68,0.15)' : item.daysLeft <= 30 ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)'}; color:${statusColor};">
+                        ${statusText}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+},
+
     };
 
     analyticsApp.init();

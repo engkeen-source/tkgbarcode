@@ -208,6 +208,14 @@
                         <span class="stat-value" id="best-seller-stat"
                             style="font-size: 1.5rem; margin-top: auto;">N/A</span>
                     </div>
+                    <div class="stat-card" style="border-top: 3px solid #ef4444;">
+                        <span class="stat-title">⚠️ Low Stock Items</span>
+                        <span class="stat-value" id="low-stock-count-stat">0</span>
+                    </div>
+                    <div class="stat-card" style="border-top: 3px solid #f59e0b;">
+                        <span class="stat-title">⏰ Expiring Within 30 Days</span>
+                        <span class="stat-value" id="expiring-count-stat">0</span>
+                    </div>
                 </div>
 
                 <div class="chart-container">
@@ -263,6 +271,63 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- LOW STOCK REPORT -->
+<div class="chart-container" style="margin-top: 2rem;">
+    <h2 style="font-size: 1.2rem; font-weight: 600; color: var(--text-primary); margin: 0 0 1rem;">
+        ⚠️ Low Stock Report <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 400;">(below 10 units)</span>
+    </h2>
+    <div style="position: relative; height: 300px; width: 100%; margin-bottom: 1.5rem;">
+        <canvas id="lowStockChart"></canvas>
+    </div>
+    <div class="inventory-table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th style="text-align:center;">Current Stock</th>
+                    <th style="text-align:center;">Status</th>
+                </tr>
+            </thead>
+            <tbody id="low-stock-tbody">
+                <tr><td colspan="3" style="text-align:center; color:var(--text-secondary); padding:2rem;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- EXPIRING GOODS REPORT -->
+<div class="chart-container" style="margin-top: 2rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:1rem;">
+        <h2 style="font-size: 1.2rem; font-weight: 600; color: var(--text-primary); margin: 0;">
+            ⏰ Expiring Goods Report
+        </h2>
+        <select id="expiry-filter" class="filter-input" style="max-width:180px;">
+            <option value="30">Within 30 Days</option>
+            <option value="60">Within 60 Days</option>
+            <option value="90">Within 90 Days</option>
+            <option value="all">All Batches</option>
+        </select>
+    </div>
+    <div style="position: relative; height: 300px; width: 100%; margin-bottom: 1.5rem;">
+        <canvas id="expiringChart"></canvas>
+    </div>
+    <div class="inventory-table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th style="text-align:center;">Expiry Date</th>
+                    <th style="text-align:center;">Qty</th>
+                    <th style="text-align:center;">Days Left</th>
+                    <th style="text-align:center;">Status</th>
+                </tr>
+            </thead>
+            <tbody id="expiring-tbody">
+                <tr><td colspan="5" style="text-align:center; color:var(--text-secondary); padding:2rem;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
             </section>
         </main>
     </div>
