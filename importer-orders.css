@@ -1,7 +1,41 @@
+#open-records-btn {
+    width: 320px;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 14px;
+
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: white;
+
+    border: none;
+    cursor: pointer;
+
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+}
+
+#open-records-btn:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+
+.upload-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.drop-zone {
+    width: 100%;
+    max-width: 700px;
+}
+
 .upload-secondary-actions {
-    margin-top: 1.5rem;
+    width: 100%;
     display: flex;
     justify-content: center;
+    margin-top: 1.2rem;
 }
 
 .workspace-tabs {

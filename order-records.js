@@ -110,30 +110,30 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         processData() {
-    this.productStats = {};
+            this.productStats = {};
 
-    // Pre-seed ALL known single products from catalog
-    // so products with zero activity still appear in the table
-    if (typeof PRODUCT_CATALOG !== 'undefined') {
-        for (const category in PRODUCT_CATALOG) {
-            if (category === 'Aliases' || category === 'Merchandise' || category === 'Gift Box Barcodes') continue;
-            for (const productName in PRODUCT_CATALOG[category]) {
-                const product = PRODUCT_CATALOG[category][productName];
-                if (product.type !== 'single') continue;
-                const name = this.canonName(productName);
-                if (!this.productStats[name]) {
-                    this.productStats[name] = {
-                        inbound: 0,
-                        outbound: 0,
-                        defects: 0,
-                        monthlyOutbound: {}
-                    };
+            // Pre-seed ALL known single products from catalog
+            // so products with zero activity still appear in the table
+            if (typeof PRODUCT_CATALOG !== 'undefined') {
+                for (const category in PRODUCT_CATALOG) {
+                    if (category === 'Aliases' || category === 'Merchandise' || category === 'Gift Box Barcodes') continue;
+                    for (const productName in PRODUCT_CATALOG[category]) {
+                        const product = PRODUCT_CATALOG[category][productName];
+                        if (product.type !== 'single') continue;
+                        const name = this.canonName(productName);
+                        if (!this.productStats[name]) {
+                            this.productStats[name] = {
+                                inbound: 0,
+                                outbound: 0,
+                                defects: 0,
+                                monthlyOutbound: {}
+                            };
+                        }
+                    }
                 }
             }
-        }
-    }
 
-    const initProduct = (rawName) => {
+            const initProduct = (rawName) => {
                 const name = this.canonName(rawName);
                 if (!this.productStats[name]) {
                     this.productStats[name] = {
@@ -296,8 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
             productRows.forEach((row) => {
                 const tr = document.createElement('tr');
                 const lowStockClass = row.dynStock < 10
-                ? 'color: var(--danger); font-weight: bold;'
-                : '';
+                    ? 'color: var(--danger); font-weight: bold;'
+                    : '';
                 const safeName = row.name.replace(/'/g, "\\'");
                 const displayName = window.formatProductName ? window.formatProductName(row.name) : row.name;
                 const linkedName = `<a onclick="window.analyticsApp.selectChartProduct('${safeName}')" style="cursor:pointer;color:var(--accent);text-decoration:underline;font-weight:500;">${this.escapeHtml(displayName)}</a>`;
@@ -505,119 +505,119 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         renderLowStockReport(liveInventory) {
-    const tbody = document.getElementById('low-stock-tbody');
-    if (!tbody) return;
+            const tbody = document.getElementById('low-stock-tbody');
+            if (!tbody) return;
 
-    const lowItems = [];
-    const seen = new Set();
+            const lowItems = [];
+            const seen = new Set();
 
-    if (typeof PRODUCT_CATALOG !== 'undefined') {
-        for (const category in PRODUCT_CATALOG) {
-            if (category === 'Aliases' || category === 'Merchandise' || category === 'Gift Box Barcodes') continue;
-            for (const productName in PRODUCT_CATALOG[category]) {
-                if (seen.has(productName)) continue;
-                seen.add(productName);
+            if (typeof PRODUCT_CATALOG !== 'undefined') {
+                for (const category in PRODUCT_CATALOG) {
+                    if (category === 'Aliases' || category === 'Merchandise' || category === 'Gift Box Barcodes') continue;
+                    for (const productName in PRODUCT_CATALOG[category]) {
+                        if (seen.has(productName)) continue;
+                        seen.add(productName);
 
-                const product = PRODUCT_CATALOG[category][productName];
-                if (product.type !== 'single') continue;
+                        const product = PRODUCT_CATALOG[category][productName];
+                        if (product.type !== 'single') continue;
 
-                const rawBatches = liveInventory[productName] || [];
-                const batches = this.getComputedBatches(rawBatches);
-                const total = batches.reduce((sum, b) => sum + b.qty, 0);
+                        const rawBatches = liveInventory[productName] || [];
+                        const batches = this.getComputedBatches(rawBatches);
+                        const total = batches.reduce((sum, b) => sum + b.qty, 0);
 
-                if (total < 10) {
-                    lowItems.push({ name: productName, stock: total });
-                }
-            }
-        }
-    } else {
-        for (const [productName, rawBatches] of Object.entries(liveInventory)) {
-            const batches = this.getComputedBatches(rawBatches);
-            const total = batches.reduce((sum, b) => sum + b.qty, 0);
-            if (total < 10) lowItems.push({ name: productName, stock: total });
-        }
-    }
-
-    lowItems.sort((a, b) => a.stock - b.stock);
-
-    const lowCountStat = document.getElementById('low-stock-count-stat');
-    if (lowCountStat) lowCountStat.textContent = lowItems.length;
-
-    // --- CHART ---
-    const canvas = document.getElementById('lowStockChart');
-    if (canvas) {
-        if (this.lowStockChartInstance) this.lowStockChartInstance.destroy();
-
-        const labels = lowItems.map(i => window.formatProductName ? window.formatProductName(i.name) : i.name);
-        const data = lowItems.map(i => i.stock);
-        const colors = lowItems.map(i => i.stock === 0 ? 'rgba(239,68,68,0.8)' : 'rgba(245,158,11,0.8)');
-        const borderColors = lowItems.map(i => i.stock === 0 ? '#ef4444' : '#f59e0b');
-
-        this.lowStockChartInstance = new Chart(canvas.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Current Stock',
-                        data,
-                        backgroundColor: colors,
-                        borderColor: borderColors,
-                        borderWidth: 1,
-                        borderRadius: 6
-                    },
-                    {
-                        label: 'Low Stock Threshold (10)',
-                        data: new Array(lowItems.length).fill(10),
-                        type: 'line',
-                        borderColor: 'rgba(255,255,255,0.3)',
-                        borderDash: [6, 4],
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: { color: 'rgba(255,255,255,0.7)', font: { family: "'Inter', sans-serif" } }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fbbf24',
-                        padding: 10
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: 'rgba(255,255,255,0.7)', maxRotation: 45, font: { size: 11 } },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+                        if (total < 10) {
+                            lowItems.push({ name: productName, stock: total });
+                        }
                     }
                 }
+            } else {
+                for (const [productName, rawBatches] of Object.entries(liveInventory)) {
+                    const batches = this.getComputedBatches(rawBatches);
+                    const total = batches.reduce((sum, b) => sum + b.qty, 0);
+                    if (total < 10) lowItems.push({ name: productName, stock: total });
+                }
             }
-        });
-    }
 
-    // --- TABLE ---
-    if (lowItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--success); padding:2rem;">✅ All products are sufficiently stocked!</td></tr>`;
-        return;
-    }
+            lowItems.sort((a, b) => a.stock - b.stock);
 
-    tbody.innerHTML = lowItems.map(item => {
-        const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
-        const statusColor = item.stock === 0 ? 'var(--danger)' : '#f59e0b';
-        const statusText = item.stock === 0 ? '🔴 Out of Stock' : '🟡 Low Stock';
-        return `
+            const lowCountStat = document.getElementById('low-stock-count-stat');
+            if (lowCountStat) lowCountStat.textContent = lowItems.length;
+
+            // --- CHART ---
+            const canvas = document.getElementById('lowStockChart');
+            if (canvas) {
+                if (this.lowStockChartInstance) this.lowStockChartInstance.destroy();
+
+                const labels = lowItems.map(i => window.formatProductName ? window.formatProductName(i.name) : i.name);
+                const data = lowItems.map(i => i.stock);
+                const colors = lowItems.map(i => i.stock === 0 ? 'rgba(239,68,68,0.8)' : 'rgba(245,158,11,0.8)');
+                const borderColors = lowItems.map(i => i.stock === 0 ? '#ef4444' : '#f59e0b');
+
+                this.lowStockChartInstance = new Chart(canvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: 'Current Stock',
+                                data,
+                                backgroundColor: colors,
+                                borderColor: borderColors,
+                                borderWidth: 1,
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'Low Stock Threshold (10)',
+                                data: new Array(lowItems.length).fill(10),
+                                type: 'line',
+                                borderColor: 'rgba(255,255,255,0.3)',
+                                borderDash: [6, 4],
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: { color: 'rgba(255,255,255,0.7)', font: { family: "'Inter', sans-serif" } }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fbbf24',
+                                padding: 10
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: 'rgba(255,255,255,0.7)', maxRotation: 45, font: { size: 11 } },
+                                grid: { color: 'rgba(255,255,255,0.05)' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
+                                grid: { color: 'rgba(255,255,255,0.05)' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- TABLE ---
+            if (lowItems.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--success); padding:2rem;">✅ All products are sufficiently stocked!</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = lowItems.map(item => {
+                const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
+                const statusColor = item.stock === 0 ? 'var(--danger)' : '#f59e0b';
+                const statusText = item.stock === 0 ? '🔴 Out of Stock' : '🟡 Low Stock';
+                return `
             <tr>
                 <td style="font-weight:600;">${this.escapeHtml(displayName)}</td>
                 <td style="text-align:center; font-size:1.2rem; font-weight:800; color:${statusColor};">${item.stock}</td>
@@ -628,126 +628,126 @@ document.addEventListener('DOMContentLoaded', () => {
                 </td>
             </tr>
         `;
-    }).join('');
-},
+            }).join('');
+        },
 
         renderExpiringReport(liveInventory) {
-    const tbody = document.getElementById('expiring-tbody');
-    if (!tbody) return;
+            const tbody = document.getElementById('expiring-tbody');
+            if (!tbody) return;
 
-    const filterVal = document.getElementById('expiry-filter')?.value;
-    const now = new Date();
-    const expiringItems = [];
+            const filterVal = document.getElementById('expiry-filter')?.value;
+            const now = new Date();
+            const expiringItems = [];
 
-    for (const [productName, rawBatches] of Object.entries(liveInventory)) {
-        const batches = this.getComputedBatches(rawBatches);
-        batches.forEach(batch => {
-            if (!batch.expiry) return;
-            const expDate = new Date(batch.expiry);
-            if (isNaN(expDate)) return;
+            for (const [productName, rawBatches] of Object.entries(liveInventory)) {
+                const batches = this.getComputedBatches(rawBatches);
+                batches.forEach(batch => {
+                    if (!batch.expiry) return;
+                    const expDate = new Date(batch.expiry);
+                    if (isNaN(expDate)) return;
 
-            const daysLeft = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
-            if (filterVal !== 'all' && daysLeft > parseInt(filterVal)) return;
+                    const daysLeft = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
+                    if (filterVal !== 'all' && daysLeft > parseInt(filterVal)) return;
 
-            expiringItems.push({ name: productName, expiry: batch.expiry, qty: batch.qty, daysLeft });
-        });
-    }
+                    expiringItems.push({ name: productName, expiry: batch.expiry, qty: batch.qty, daysLeft });
+                });
+            }
 
-    expiringItems.sort((a, b) => a.daysLeft - b.daysLeft);
+            expiringItems.sort((a, b) => a.daysLeft - b.daysLeft);
 
-    const expCountStat = document.getElementById('expiring-count-stat');
-    if (expCountStat) {
-        expCountStat.textContent = expiringItems.filter(i => i.daysLeft <= 30).length;
-    }
+            const expCountStat = document.getElementById('expiring-count-stat');
+            if (expCountStat) {
+                expCountStat.textContent = expiringItems.filter(i => i.daysLeft <= 30).length;
+            }
 
-    // --- CHART ---
-    const canvas = document.getElementById('expiringChart');
-    if (canvas) {
-        if (this.expiringChartInstance) this.expiringChartInstance.destroy();
+            // --- CHART ---
+            const canvas = document.getElementById('expiringChart');
+            if (canvas) {
+                if (this.expiringChartInstance) this.expiringChartInstance.destroy();
 
-        // Group by urgency buckets
-        const buckets = { 'Expired': 0, 'Critical (≤7d)': 0, 'Expiring Soon (≤30d)': 0, 'OK (>30d)': 0 };
-        expiringItems.forEach(item => {
-            if (item.daysLeft <= 0) buckets['Expired'] += item.qty;
-            else if (item.daysLeft <= 7) buckets['Critical (≤7d)'] += item.qty;
-            else if (item.daysLeft <= 30) buckets['Expiring Soon (≤30d)'] += item.qty;
-            else buckets['OK (>30d)'] += item.qty;
-        });
+                // Group by urgency buckets
+                const buckets = { 'Expired': 0, 'Critical (≤7d)': 0, 'Expiring Soon (≤30d)': 0, 'OK (>30d)': 0 };
+                expiringItems.forEach(item => {
+                    if (item.daysLeft <= 0) buckets['Expired'] += item.qty;
+                    else if (item.daysLeft <= 7) buckets['Critical (≤7d)'] += item.qty;
+                    else if (item.daysLeft <= 30) buckets['Expiring Soon (≤30d)'] += item.qty;
+                    else buckets['OK (>30d)'] += item.qty;
+                });
 
-        const bucketColors = {
-            'Expired': 'rgba(239,68,68,0.8)',
-            'Critical (≤7d)': 'rgba(239,68,68,0.5)',
-            'Expiring Soon (≤30d)': 'rgba(245,158,11,0.8)',
-            'OK (>30d)': 'rgba(16,185,129,0.8)'
-        };
+                const bucketColors = {
+                    'Expired': 'rgba(239,68,68,0.8)',
+                    'Critical (≤7d)': 'rgba(239,68,68,0.5)',
+                    'Expiring Soon (≤30d)': 'rgba(245,158,11,0.8)',
+                    'OK (>30d)': 'rgba(16,185,129,0.8)'
+                };
 
-        const bucketBorders = {
-            'Expired': '#ef4444',
-            'Critical (≤7d)': '#ef4444',
-            'Expiring Soon (≤30d)': '#f59e0b',
-            'OK (>30d)': '#10b981'
-        };
+                const bucketBorders = {
+                    'Expired': '#ef4444',
+                    'Critical (≤7d)': '#ef4444',
+                    'Expiring Soon (≤30d)': '#f59e0b',
+                    'OK (>30d)': '#10b981'
+                };
 
-        this.expiringChartInstance = new Chart(canvas.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: Object.keys(buckets),
-                datasets: [{
-                    label: 'Total Qty',
-                    data: Object.values(buckets),
-                    backgroundColor: Object.keys(buckets).map(k => bucketColors[k]),
-                    borderColor: Object.keys(buckets).map(k => bucketBorders[k]),
-                    borderWidth: 1,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fbbf24',
-                        padding: 10,
-                        callbacks: {
-                            label: ctx => `${ctx.parsed.y} units`
+                this.expiringChartInstance = new Chart(canvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(buckets),
+                        datasets: [{
+                            label: 'Total Qty',
+                            data: Object.values(buckets),
+                            backgroundColor: Object.keys(buckets).map(k => bucketColors[k]),
+                            borderColor: Object.keys(buckets).map(k => bucketBorders[k]),
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fbbf24',
+                                padding: 10,
+                                callbacks: {
+                                    label: ctx => `${ctx.parsed.y} units`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 12 } },
+                                grid: { color: 'rgba(255,255,255,0.05)' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
+                                grid: { color: 'rgba(255,255,255,0.05)' }
+                            }
                         }
                     }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 12 } },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
-                    }
-                }
+                });
             }
-        });
-    }
 
-    // --- TABLE ---
-    if (expiringItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--success); padding:2rem;">✅ No products expiring in this timeframe!</td></tr>`;
-        return;
-    }
+            // --- TABLE ---
+            if (expiringItems.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--success); padding:2rem;">✅ No products expiring in this timeframe!</td></tr>`;
+                return;
+            }
 
-    tbody.innerHTML = expiringItems.map(item => {
-        const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
-        const expDateStr = new Date(item.expiry).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            tbody.innerHTML = expiringItems.map(item => {
+                const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
+                const expDateStr = new Date(item.expiry).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
-        let statusColor, statusText;
-        if (item.daysLeft <= 0) { statusColor = 'var(--danger)'; statusText = '🔴 Expired'; }
-        else if (item.daysLeft <= 7) { statusColor = 'var(--danger)'; statusText = '🔴 Critical'; }
-        else if (item.daysLeft <= 30) { statusColor = '#f59e0b'; statusText = '🟡 Expiring Soon'; }
-        else { statusColor = '#10b981'; statusText = '🟢 OK'; }
+                let statusColor, statusText;
+                if (item.daysLeft <= 0) { statusColor = 'var(--danger)'; statusText = '🔴 Expired'; }
+                else if (item.daysLeft <= 7) { statusColor = 'var(--danger)'; statusText = '🔴 Critical'; }
+                else if (item.daysLeft <= 30) { statusColor = '#f59e0b'; statusText = '🟡 Expiring Soon'; }
+                else { statusColor = '#10b981'; statusText = '🟢 OK'; }
 
-        return `
+                return `
             <tr>
                 <td style="font-weight:600;">${this.escapeHtml(displayName)}</td>
                 <td style="text-align:center; color:${statusColor}; font-weight:600;">${expDateStr}</td>
@@ -760,204 +760,204 @@ document.addEventListener('DOMContentLoaded', () => {
                 </td>
             </tr>
         `;
-    }).join('');
-},
+            }).join('');
+        },
 
-    getSkuOutbound(productName, timeframe) {
-    const stats = this.productStats[this.canonName(productName)];
-    if (!stats) return 0;
+        getSkuOutbound(productName, timeframe) {
+            const stats = this.productStats[this.canonName(productName)];
+            if (!stats) return 0;
 
-    if (timeframe === 'all') {
-        return stats.outbound || 0;
-    }
-
-    const now = new Date();
-    const prefix = timeframe === 'daily' ? 'daily'
-        : timeframe === 'weekly' ? 'weekly'
-        : timeframe === 'monthly' ? 'monthly'
-        : 'yearly';
-
-    let currentKey = '';
-    if (timeframe === 'daily') {
-        currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    } else if (timeframe === 'weekly') {
-        const wd = new Date(now);
-        const day = wd.getDay() || 7;
-        wd.setDate(wd.getDate() - (day - 1));
-        currentKey = `${wd.getFullYear()}-${String(wd.getMonth() + 1).padStart(2, '0')}-${String(wd.getDate()).padStart(2, '0')}`;
-    } else if (timeframe === 'monthly') {
-        currentKey = now.toLocaleString('default', { month: 'short', year: 'numeric' });
-    } else if (timeframe === 'yearly') {
-        currentKey = `${now.getFullYear()}`;
-    }
-
-    const mo = stats.monthlyOutbound || {};
-    return mo[`${prefix}::${currentKey}`] || 0;
-},
-
-renderSkuRankings() {
-    const timeframe = document.getElementById('sku-timeframe-filter')?.value || 'all';
-
-    // Gather all products with their outbound for the selected timeframe
-    const allSkus = [];
-
-    if (typeof PRODUCT_CATALOG !== 'undefined') {
-        const seen = new Set();
-        for (const category in PRODUCT_CATALOG) {
-            if (category === 'Aliases' || category === 'Merchandise' || category === 'Gift Box Barcodes') continue;
-            for (const productName in PRODUCT_CATALOG[category]) {
-                if (seen.has(productName)) continue;
-                seen.add(productName);
-                const product = PRODUCT_CATALOG[category][productName];
-                if (product.type !== 'single') continue;
-                if (this.excludedProducts && this.excludedProducts.includes(productName.toLowerCase())) continue;
-
-                const outbound = this.getSkuOutbound(productName, timeframe);
-                allSkus.push({ name: productName, outbound });
+            if (timeframe === 'all') {
+                return stats.outbound || 0;
             }
-        }
-    } else {
-        for (const [name, stats] of Object.entries(this.productStats)) {
-            allSkus.push({ name, outbound: this.getSkuOutbound(name, timeframe) });
-        }
-    }
 
-    allSkus.sort((a, b) => b.outbound - a.outbound);
+            const now = new Date();
+            const prefix = timeframe === 'daily' ? 'daily'
+                : timeframe === 'weekly' ? 'weekly'
+                    : timeframe === 'monthly' ? 'monthly'
+                        : 'yearly';
 
-    const top10 = allSkus.slice(0, 10);
-    const least10 = [...allSkus].sort((a, b) => a.outbound - b.outbound).slice(0, 10);
+            let currentKey = '';
+            if (timeframe === 'daily') {
+                currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            } else if (timeframe === 'weekly') {
+                const wd = new Date(now);
+                const day = wd.getDay() || 7;
+                wd.setDate(wd.getDate() - (day - 1));
+                currentKey = `${wd.getFullYear()}-${String(wd.getMonth() + 1).padStart(2, '0')}-${String(wd.getDate()).padStart(2, '0')}`;
+            } else if (timeframe === 'monthly') {
+                currentKey = now.toLocaleString('default', { month: 'short', year: 'numeric' });
+            } else if (timeframe === 'yearly') {
+                currentKey = `${now.getFullYear()}`;
+            }
 
-    // --- TOP 10 CHART ---
-    const topCanvas = document.getElementById('topSkuChart');
-    if (topCanvas) {
-        if (this.topSkuChartInstance) this.topSkuChartInstance.destroy();
-        this.topSkuChartInstance = new Chart(topCanvas.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: top10.map(i => window.formatProductName ? window.formatProductName(i.name) : i.name),
-                datasets: [{
-                    label: 'Units Sold',
-                    data: top10.map(i => i.outbound),
-                    backgroundColor: top10.map((_, idx) => `rgba(16, 185, 129, ${1 - idx * 0.07})`),
-                    borderColor: '#10b981',
-                    borderWidth: 1,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#10b981',
-                        padding: 10,
-                        callbacks: { label: ctx => `${ctx.parsed.x} units` }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
-                    },
-                    y: {
-                        ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+            const mo = stats.monthlyOutbound || {};
+            return mo[`${prefix}::${currentKey}`] || 0;
+        },
+
+        renderSkuRankings() {
+            const timeframe = document.getElementById('sku-timeframe-filter')?.value || 'all';
+
+            // Gather all products with their outbound for the selected timeframe
+            const allSkus = [];
+
+            if (typeof PRODUCT_CATALOG !== 'undefined') {
+                const seen = new Set();
+                for (const category in PRODUCT_CATALOG) {
+                    if (category === 'Aliases' || category === 'Merchandise' || category === 'Gift Box Barcodes') continue;
+                    for (const productName in PRODUCT_CATALOG[category]) {
+                        if (seen.has(productName)) continue;
+                        seen.add(productName);
+                        const product = PRODUCT_CATALOG[category][productName];
+                        if (product.type !== 'single') continue;
+                        if (this.excludedProducts && this.excludedProducts.includes(productName.toLowerCase())) continue;
+
+                        const outbound = this.getSkuOutbound(productName, timeframe);
+                        allSkus.push({ name: productName, outbound });
                     }
                 }
-            }
-        });
-    }
-
-    // --- LEAST 10 CHART ---
-    const leastCanvas = document.getElementById('leastSkuChart');
-    if (leastCanvas) {
-        if (this.leastSkuChartInstance) this.leastSkuChartInstance.destroy();
-        this.leastSkuChartInstance = new Chart(leastCanvas.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: least10.map(i => window.formatProductName ? window.formatProductName(i.name) : i.name),
-                datasets: [{
-                    label: 'Units Sold',
-                    data: least10.map(i => i.outbound),
-                    backgroundColor: least10.map((_, idx) => `rgba(239, 68, 68, ${0.4 + idx * 0.06})`),
-                    borderColor: '#ef4444',
-                    borderWidth: 1,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#ef4444',
-                        padding: 10,
-                        callbacks: { label: ctx => `${ctx.parsed.x} units` }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
-                    },
-                    y: {
-                        ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
-                    }
+            } else {
+                for (const [name, stats] of Object.entries(this.productStats)) {
+                    allSkus.push({ name, outbound: this.getSkuOutbound(name, timeframe) });
                 }
             }
-        });
-    }
 
-    // --- TOP 10 TABLE ---
-    const topTbody = document.getElementById('top-sku-tbody');
-    if (topTbody) {
-        if (top10.length === 0) {
-            topTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary); padding:2rem;">No data for this timeframe</td></tr>`;
-        } else {
-            topTbody.innerHTML = top10.map((item, idx) => {
-                const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
-                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`;
-                return `
+            allSkus.sort((a, b) => b.outbound - a.outbound);
+
+            const top10 = allSkus.slice(0, 10);
+            const least10 = [...allSkus].sort((a, b) => a.outbound - b.outbound).slice(0, 10);
+
+            // --- TOP 10 CHART ---
+            const topCanvas = document.getElementById('topSkuChart');
+            if (topCanvas) {
+                if (this.topSkuChartInstance) this.topSkuChartInstance.destroy();
+                this.topSkuChartInstance = new Chart(topCanvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: top10.map(i => window.formatProductName ? window.formatProductName(i.name) : i.name),
+                        datasets: [{
+                            label: 'Units Sold',
+                            data: top10.map(i => i.outbound),
+                            backgroundColor: top10.map((_, idx) => `rgba(16, 185, 129, ${1 - idx * 0.07})`),
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#10b981',
+                                padding: 10,
+                                callbacks: { label: ctx => `${ctx.parsed.x} units` }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
+                                grid: { color: 'rgba(255,255,255,0.05)' }
+                            },
+                            y: {
+                                ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
+                                grid: { color: 'rgba(255,255,255,0.05)' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- LEAST 10 CHART ---
+            const leastCanvas = document.getElementById('leastSkuChart');
+            if (leastCanvas) {
+                if (this.leastSkuChartInstance) this.leastSkuChartInstance.destroy();
+                this.leastSkuChartInstance = new Chart(leastCanvas.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: least10.map(i => window.formatProductName ? window.formatProductName(i.name) : i.name),
+                        datasets: [{
+                            label: 'Units Sold',
+                            data: least10.map(i => i.outbound),
+                            backgroundColor: least10.map((_, idx) => `rgba(239, 68, 68, ${0.4 + idx * 0.06})`),
+                            borderColor: '#ef4444',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#ef4444',
+                                padding: 10,
+                                callbacks: { label: ctx => `${ctx.parsed.x} units` }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
+                                grid: { color: 'rgba(255,255,255,0.05)' }
+                            },
+                            y: {
+                                ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
+                                grid: { color: 'rgba(255,255,255,0.05)' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- TOP 10 TABLE ---
+            const topTbody = document.getElementById('top-sku-tbody');
+            if (topTbody) {
+                if (top10.length === 0) {
+                    topTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary); padding:2rem;">No data for this timeframe</td></tr>`;
+                } else {
+                    topTbody.innerHTML = top10.map((item, idx) => {
+                        const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
+                        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`;
+                        return `
                     <tr>
                         <td style="font-weight:700; color:#10b981;">${medal}</td>
                         <td style="font-weight:600;">${this.escapeHtml(displayName)}</td>
                         <td style="text-align:center; font-weight:700; color:#10b981;">${item.outbound}</td>
                     </tr>
                 `;
-            }).join('');
-        }
-    }
+                    }).join('');
+                }
+            }
 
-    // --- LEAST 10 TABLE ---
-    const leastTbody = document.getElementById('least-sku-tbody');
-    if (leastTbody) {
-        if (least10.length === 0) {
-            leastTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary); padding:2rem;">No data for this timeframe</td></tr>`;
-        } else {
-            leastTbody.innerHTML = least10.map((item, idx) => {
-                const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
-                return `
+            // --- LEAST 10 TABLE ---
+            const leastTbody = document.getElementById('least-sku-tbody');
+            if (leastTbody) {
+                if (least10.length === 0) {
+                    leastTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary); padding:2rem;">No data for this timeframe</td></tr>`;
+                } else {
+                    leastTbody.innerHTML = least10.map((item, idx) => {
+                        const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
+                        return `
                     <tr>
                         <td style="font-weight:700; color:#ef4444;">${idx + 1}</td>
                         <td style="font-weight:600;">${this.escapeHtml(displayName)}</td>
                         <td style="text-align:center; font-weight:700; color:#ef4444;">${item.outbound}</td>
                     </tr>
                 `;
-            }).join('');
-        }
-    }
-},
+                    }).join('');
+                }
+            }
+        },
     };
 
     analyticsApp.init();
