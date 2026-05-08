@@ -328,6 +328,73 @@
         </table>
     </div>
 </div>
+<!-- TOP & LEAST PERFORMING SKUs -->
+<div class="chart-container" style="margin-top: 2rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+        <h2 style="font-size: 1.2rem; font-weight: 600; color: var(--text-primary); margin: 0;">
+            📊 SKU Performance Rankings
+        </h2>
+        <select id="sku-timeframe-filter" class="filter-input" style="max-width:180px;">
+            <option value="all">All Time</option>
+            <option value="daily">Today</option>
+            <option value="weekly">This Week</option>
+            <option value="monthly">This Month</option>
+            <option value="yearly">This Year</option>
+        </select>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+
+        <!-- Top 10 -->
+        <div>
+            <h3 style="font-size:1rem; font-weight:600; color:#10b981; margin:0 0 1rem;">
+                🏆 Top 10 Performing SKUs
+            </h3>
+            <div style="position:relative; height:300px; width:100%; margin-bottom:1.5rem;">
+                <canvas id="topSkuChart"></canvas>
+            </div>
+            <div class="inventory-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Product</th>
+                            <th style="text-align:center;">Units Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top-sku-tbody">
+                        <tr><td colspan="3" style="text-align:center; color:var(--text-secondary); padding:2rem;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Least 10 -->
+        <div>
+            <h3 style="font-size:1rem; font-weight:600; color:#ef4444; margin:0 0 1rem;">
+                📉 Least 10 Performing SKUs
+            </h3>
+            <div style="position:relative; height:300px; width:100%; margin-bottom:1.5rem;">
+                <canvas id="leastSkuChart"></canvas>
+            </div>
+            <div class="inventory-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Product</th>
+                            <th style="text-align:center;">Units Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody id="least-sku-tbody">
+                        <tr><td colspan="3" style="text-align:center; color:var(--text-secondary); padding:2rem;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
             </section>
         </main>
     </div>

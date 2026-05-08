@@ -75,6 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
             this.initChart();
             this.updateChart();
             this.loadStockReports();
+            this.renderSkuRankings();
+
+            const skuFilter = document.getElementById('sku-timeframe-filter');
+            if (skuFilter) {
+                skuFilter.onchange = () => this.renderSkuRankings();
+            }
         },
 
         canonName(n) {
@@ -757,6 +763,201 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
 },
 
+    getSkuOutbound(productName, timeframe) {
+    const stats = this.productStats[this.canonName(productName)];
+    if (!stats) return 0;
+
+    if (timeframe === 'all') {
+        return stats.outbound || 0;
+    }
+
+    const now = new Date();
+    const prefix = timeframe === 'daily' ? 'daily'
+        : timeframe === 'weekly' ? 'weekly'
+        : timeframe === 'monthly' ? 'monthly'
+        : 'yearly';
+
+    let currentKey = '';
+    if (timeframe === 'daily') {
+        currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    } else if (timeframe === 'weekly') {
+        const wd = new Date(now);
+        const day = wd.getDay() || 7;
+        wd.setDate(wd.getDate() - (day - 1));
+        currentKey = `${wd.getFullYear()}-${String(wd.getMonth() + 1).padStart(2, '0')}-${String(wd.getDate()).padStart(2, '0')}`;
+    } else if (timeframe === 'monthly') {
+        currentKey = now.toLocaleString('default', { month: 'short', year: 'numeric' });
+    } else if (timeframe === 'yearly') {
+        currentKey = `${now.getFullYear()}`;
+    }
+
+    const mo = stats.monthlyOutbound || {};
+    return mo[`${prefix}::${currentKey}`] || 0;
+},
+
+renderSkuRankings() {
+    const timeframe = document.getElementById('sku-timeframe-filter')?.value || 'all';
+
+    // Gather all products with their outbound for the selected timeframe
+    const allSkus = [];
+
+    if (typeof PRODUCT_CATALOG !== 'undefined') {
+        const seen = new Set();
+        for (const category in PRODUCT_CATALOG) {
+            if (category === 'Aliases' || category === 'Merchandise' || category === 'Gift Box Barcodes') continue;
+            for (const productName in PRODUCT_CATALOG[category]) {
+                if (seen.has(productName)) continue;
+                seen.add(productName);
+                const product = PRODUCT_CATALOG[category][productName];
+                if (product.type !== 'single') continue;
+                if (this.excludedProducts && this.excludedProducts.includes(productName.toLowerCase())) continue;
+
+                const outbound = this.getSkuOutbound(productName, timeframe);
+                allSkus.push({ name: productName, outbound });
+            }
+        }
+    } else {
+        for (const [name, stats] of Object.entries(this.productStats)) {
+            allSkus.push({ name, outbound: this.getSkuOutbound(name, timeframe) });
+        }
+    }
+
+    allSkus.sort((a, b) => b.outbound - a.outbound);
+
+    const top10 = allSkus.slice(0, 10);
+    const least10 = [...allSkus].sort((a, b) => a.outbound - b.outbound).slice(0, 10);
+
+    // --- TOP 10 CHART ---
+    const topCanvas = document.getElementById('topSkuChart');
+    if (topCanvas) {
+        if (this.topSkuChartInstance) this.topSkuChartInstance.destroy();
+        this.topSkuChartInstance = new Chart(topCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: top10.map(i => window.formatProductName ? window.formatProductName(i.name) : i.name),
+                datasets: [{
+                    label: 'Units Sold',
+                    data: top10.map(i => i.outbound),
+                    backgroundColor: top10.map((_, idx) => `rgba(16, 185, 129, ${1 - idx * 0.07})`),
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#10b981',
+                        padding: 10,
+                        callbacks: { label: ctx => `${ctx.parsed.x} units` }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y: {
+                        ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- LEAST 10 CHART ---
+    const leastCanvas = document.getElementById('leastSkuChart');
+    if (leastCanvas) {
+        if (this.leastSkuChartInstance) this.leastSkuChartInstance.destroy();
+        this.leastSkuChartInstance = new Chart(leastCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: least10.map(i => window.formatProductName ? window.formatProductName(i.name) : i.name),
+                datasets: [{
+                    label: 'Units Sold',
+                    data: least10.map(i => i.outbound),
+                    backgroundColor: least10.map((_, idx) => `rgba(239, 68, 68, ${0.4 + idx * 0.06})`),
+                    borderColor: '#ef4444',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#ef4444',
+                        padding: 10,
+                        callbacks: { label: ctx => `${ctx.parsed.x} units` }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { precision: 0, color: 'rgba(255,255,255,0.7)' },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y: {
+                        ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- TOP 10 TABLE ---
+    const topTbody = document.getElementById('top-sku-tbody');
+    if (topTbody) {
+        if (top10.length === 0) {
+            topTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary); padding:2rem;">No data for this timeframe</td></tr>`;
+        } else {
+            topTbody.innerHTML = top10.map((item, idx) => {
+                const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
+                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`;
+                return `
+                    <tr>
+                        <td style="font-weight:700; color:#10b981;">${medal}</td>
+                        <td style="font-weight:600;">${this.escapeHtml(displayName)}</td>
+                        <td style="text-align:center; font-weight:700; color:#10b981;">${item.outbound}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    // --- LEAST 10 TABLE ---
+    const leastTbody = document.getElementById('least-sku-tbody');
+    if (leastTbody) {
+        if (least10.length === 0) {
+            leastTbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary); padding:2rem;">No data for this timeframe</td></tr>`;
+        } else {
+            leastTbody.innerHTML = least10.map((item, idx) => {
+                const displayName = window.formatProductName ? window.formatProductName(item.name) : item.name;
+                return `
+                    <tr>
+                        <td style="font-weight:700; color:#ef4444;">${idx + 1}</td>
+                        <td style="font-weight:600;">${this.escapeHtml(displayName)}</td>
+                        <td style="text-align:center; font-weight:700; color:#ef4444;">${item.outbound}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+},
     };
 
     analyticsApp.init();
