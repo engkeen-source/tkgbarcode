@@ -432,18 +432,21 @@
         }
 
         function getAvgDailySales(productName) {
-            // Find all outbound ledger rows for this product
+            // Only count REAL order fulfillments — exclude manual adjustments and batch clears
             const outboundRows = ledger.filter(row =>
                 row.transaction_type === 'OUTBOUND' &&
                 row.product_name &&
-                row.product_name.toLowerCase() === productName.toLowerCase()
+                row.product_name.toLowerCase() === productName.toLowerCase() &&
+                row.reference_id !== 'MANUAL_ADJUST' &&  // exclude manual edits
+                row.reference_id !== 'DEFECT_LOG' &&      // exclude defects
+                row.reference_id !== 'SYSTEM_ROLLUP'      // exclude consolidations
             );
 
             if (outboundRows.length === 0) return 0;
 
             const totalQty = outboundRows.reduce((sum, r) => sum + (Number(r.qty) || 0), 0);
 
-            // Find date range
+            // Use days since first order to today for a realistic average
             const dates = outboundRows
                 .map(r => new Date(r.created_at || r.date))
                 .filter(d => !isNaN(d));
@@ -451,8 +454,8 @@
             if (dates.length === 0) return 0;
 
             const earliest = new Date(Math.min(...dates));
-            const latest = new Date(Math.max(...dates));
-            const daySpan = Math.max(1, Math.ceil((latest - earliest) / (1000 * 60 * 60 * 24)));
+            const today = new Date();
+            const daySpan = Math.max(1, Math.ceil((today - earliest) / (1000 * 60 * 60 * 24)));
 
             return totalQty / daySpan;
         }
@@ -472,7 +475,8 @@
 
             let urgency;
             if (avgDaily === 0) {
-                urgency = stock > 0 ? 'overstock' : 'ok';
+                // No real sales data yet — don't mark as overstock, just mark as no data
+                urgency = stock > 0 ? 'ok' : 'ok';
             } else if (daysLeft <= 14) {
                 urgency = 'critical';
             } else if (daysLeft <= BUFFER_DAYS) {
