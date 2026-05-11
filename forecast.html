@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TKG Barcode Ops - Stock Forecast</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: var(--bg-app);
+            min-height: 100vh;
+        }
+
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .page-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .page-header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .stat-title {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-input {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            min-width: 200px;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        select.filter-input {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+            cursor: pointer;
+            padding-right: 2.5rem;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .table-container {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            overflow-x: auto;
+            margin-bottom: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        th,
+        td {
+            padding: 1.1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .urgency-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .urgency-critical {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .urgency-soon {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .urgency-ok {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        .urgency-overstock {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .ai-section {
+            background: linear-gradient(145deg, rgba(139, 92, 246, 0.05) 0%, rgba(59, 130, 246, 0.03) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .ai-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #a78bfa;
+            margin: 0;
+        }
+
+        .ai-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(139, 92, 246, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .ai-response {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        .ai-loading {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .ai-spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            border-top-color: #a78bfa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .progress-bar-wrap {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.5s ease;
+        }
+
+        .btn-ai {
+            background: linear-gradient(135deg, #7c3aed, #3b82f6);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-ai:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-ai:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 900px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <header>
+            <div style="display:flex; align-items:center; gap:1rem;">
+                <a href="index.html" class="secondary-btn" style="text-decoration:none; font-size:0.9rem;">← Home</a>
+                <div class="logo">TKGBarcodeOps</div>
+            </div>
+            <div>
+                <span style="color:var(--text-secondary);">Hybrid math + AI stock forecasting</span>
+            </div>
+        </header>
+
+        <main class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1>📦 Stock Forecast</h1>
+                    <div style="color:var(--text-secondary); margin-top:0.4rem;">
+                        60-day buffer · All-time burn rate · Hybrid AI analysis
+                    </div>
+                </div>
+                <button class="btn-ai" id="ai-analyse-btn" onclick="runAiAnalysis()">
+                    ✨ Run AI Analysis
+                </button>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="stats-grid">
+                <div class="stat-card" style="border-top:3px solid #ef4444;">
+                    <span class="stat-title">🔴 Order Now</span>
+                    <span class="stat-value" id="stat-critical">0</span>
+                </div>
+                <div class="stat-card" style="border-top:3px solid #f59e0b;">
+                    <span class="stat-title">🟡 Order Soon</span>
+                    <span class="stat-value" id="stat-soon">0</span>
+                </div>
+                <div class="stat-card" style="border-top:3px solid #10b981;">
+                    <span class="stat-title">🟢 Stock OK</span>
+                    <span class="stat-value" id="stat-ok">0</span>
+                </div>
+                <div class="stat-card" style="border-top:3px solid #3b82f6;">
+                    <span class="stat-title">🔵 Overstocked</span>
+                    <span class="stat-value" id="stat-overstock">0</span>
+                </div>
+            </div>
+
+            <!-- AI Analysis Section -->
+            <div class="ai-section" id="ai-section" style="display:none;">
+                <div class="ai-header">
+                    <div class="ai-icon">✨</div>
+                    <h2>AI Forecast Analysis</h2>
+                </div>
+                <div id="ai-response-area">
+                    <div class="ai-loading" id="ai-loading">
+                        <div class="ai-spinner"></div>
+                        <span>Analysing burn rates and generating forecast recommendations...</span>
+                    </div>
+                    <div class="ai-response" id="ai-response" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-bar">
+                <input type="text" id="forecast-search" class="filter-input" placeholder="Search product...">
+                <select id="urgency-filter" class="filter-input" style="max-width:180px;">
+                    <option value="all">All Urgency</option>
+                    <option value="critical">🔴 Order Now</option>
+                    <option value="soon">🟡 Order Soon</option>
+                    <option value="ok">🟢 OK</option>
+                    <option value="overstock">🔵 Overstocked</option>
+                </select>
+                <select id="sort-filter" class="filter-input" style="max-width:200px;">
+                    <option value="urgency">Sort: Urgency</option>
+                    <option value="days-asc">Sort: Days Left (Low→High)</option>
+                    <option value="days-desc">Sort: Days Left (High→Low)</option>
+                    <option value="reorder-desc">Sort: Reorder Qty (High→Low)</option>
+                    <option value="name">Sort: Name</option>
+                </select>
+            </div>
+
+            <!-- Forecast Table -->
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th style="text-align:center;">Current Stock</th>
+                            <th style="text-align:center;">Avg Daily Sales</th>
+                            <th style="text-align:center;">Days of Stock Left</th>
+                            <th style="text-align:center;">Suggested Reorder Qty</th>
+                            <th style="text-align:center;">Reorder By</th>
+                            <th style="text-align:center;">Urgency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="forecast-tbody">
+                        <tr>
+                            <td colspan="7" style="text-align:center; color:var(--text-secondary); padding:3rem;">
+                                Loading forecast data...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="products.js"></script>
+    <script src="supabase-db.js"></script>
+    <script src="notifications.js"></script>
+    <script>
+        const BUFFER_DAYS = 60;
+        const EXCLUDED = ['fish head curry 65g', 'yumi cheese corn curls'];
+
+        let forecastData = [];
+        let liveInventory = {};
+        let ledger = [];
+
+        // --- MATH ENGINE ---
+        function getComputedBatches(rawBatches) {
+            let pos = [];
+            let neg = 0;
+            (rawBatches || []).forEach(b => {
+                if (b.qty > 0) pos.push({ expiry: b.expiry, qty: b.qty });
+                else if (b.qty < 0) neg += Math.abs(b.qty);
+            });
+            pos.sort((a, b) => {
+                if (!a.expiry && !b.expiry) return 0;
+                if (!a.expiry) return 1;
+                if (!b.expiry) return -1;
+                return new Date(a.expiry) - new Date(b.expiry);
+            });
+            for (let i = 0; i < pos.length; i++) {
+                if (neg <= 0) break;
+                if (pos[i].qty >= neg) { pos[i].qty -= neg; neg = 0; }
+                else { neg -= pos[i].qty; pos[i].qty = 0; }
+            }
+            return pos.filter(b => b.qty > 0);
+        }
+
+        function getTotalStock(productName) {
+            const raw = liveInventory[productName] || [];
+            const batches = getComputedBatches(raw);
+            return batches.reduce((sum, b) => sum + b.qty, 0);
+        }
+
+        function getAvgDailySales(productName) {
+            // Find all outbound ledger rows for this product
+            const outboundRows = ledger.filter(row =>
+                row.transaction_type === 'OUTBOUND' &&
+                row.product_name &&
+                row.product_name.toLowerCase() === productName.toLowerCase()
+            );
+
+            if (outboundRows.length === 0) return 0;
+
+            const totalQty = outboundRows.reduce((sum, r) => sum + (Number(r.qty) || 0), 0);
+
+            // Find date range
+            const dates = outboundRows
+                .map(r => new Date(r.created_at || r.date))
+                .filter(d => !isNaN(d));
+
+            if (dates.length === 0) return 0;
+
+            const earliest = new Date(Math.min(...dates));
+            const latest = new Date(Math.max(...dates));
+            const daySpan = Math.max(1, Math.ceil((latest - earliest) / (1000 * 60 * 60 * 24)));
+
+            return totalQty / daySpan;
+        }
+
+        function computeForecast(productName) {
+            const stock = getTotalStock(productName);
+            const avgDaily = getAvgDailySales(productName);
+
+            const daysLeft = avgDaily > 0 ? Math.floor(stock / avgDaily) : Infinity;
+            const reorderQty = avgDaily > 0
+                ? Math.max(0, Math.ceil((BUFFER_DAYS * avgDaily) - stock))
+                : 0;
+
+            const reorderByDate = avgDaily > 0 && daysLeft !== Infinity
+                ? new Date(Date.now() + (daysLeft - BUFFER_DAYS) * 24 * 60 * 60 * 1000)
+                : null;
+
+            let urgency;
+            if (avgDaily === 0) {
+                urgency = stock > 0 ? 'overstock' : 'ok';
+            } else if (daysLeft <= 14) {
+                urgency = 'critical';
+            } else if (daysLeft <= BUFFER_DAYS) {
+                urgency = 'soon';
+            } else if (stock > avgDaily * BUFFER_DAYS * 2) {
+                urgency = 'overstock';
+            } else {
+                urgency = 'ok';
+            }
+
+            return { productName, stock, avgDaily, daysLeft, reorderQty, reorderByDate, urgency };
+        }
+
+        function urgencyOrder(u) {
+            return { critical: 0, soon: 1, ok: 2, overstock: 3 }[u] ?? 4;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('forecast-tbody');
+            const search = document.getElementById('forecast-search').value.toLowerCase().trim();
+            const urgencyFilter = document.getElementById('urgency-filter').value;
+            const sortFilter = document.getElementById('sort-filter').value;
+
+            let filtered = forecastData.filter(row => {
+                const name = (window.formatProductName ? window.formatProductName(row.productName) : row.productName).toLowerCase();
+                const matchSearch = !search || name.includes(search);
+                const matchUrgency = urgencyFilter === 'all' || row.urgency === urgencyFilter;
+                return matchSearch && matchUrgency;
+            });
+
+            filtered.sort((a, b) => {
+                if (sortFilter === 'urgency') return urgencyOrder(a.urgency) - urgencyOrder(b.urgency);
+                if (sortFilter === 'days-asc') return (a.daysLeft === Infinity ? 99999 : a.daysLeft) - (b.daysLeft === Infinity ? 99999 : b.daysLeft);
+                if (sortFilter === 'days-desc') return (b.daysLeft === Infinity ? 99999 : b.daysLeft) - (a.daysLeft === Infinity ? 99999 : a.daysLeft);
+                if (sortFilter === 'reorder-desc') return b.reorderQty - a.reorderQty;
+                if (sortFilter === 'name') return a.productName.localeCompare(b.productName);
+                return 0;
+            });
+
+            // Update stat cards
+            const counts = { critical: 0, soon: 0, ok: 0, overstock: 0 };
+            forecastData.forEach(r => counts[r.urgency] = (counts[r.urgency] || 0) + 1);
+            document.getElementById('stat-critical').textContent = counts.critical;
+            document.getElementById('stat-soon').textContent = counts.soon;
+            document.getElementById('stat-ok').textContent = counts.ok;
+            document.getElementById('stat-overstock').textContent = counts.overstock;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary); padding:3rem;">No products match your filter.</td></tr>`;
+                return;
+            }
+
+            const maxStock = Math.max(...filtered.map(r => r.stock), 1);
+
+            tbody.innerHTML = filtered.map(row => {
+                const displayName = window.formatProductName ? window.formatProductName(row.productName) : row.productName;
+                const daysStr = row.daysLeft === Infinity ? '∞' : row.daysLeft;
+                const avgStr = row.avgDaily === 0 ? '0' : row.avgDaily.toFixed(2);
+                const reorderDateStr = row.reorderByDate
+                    ? (row.reorderByDate < new Date() ? '<span style="color:#ef4444;">Overdue</span>' : row.reorderByDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }))
+                    : '<span style="color:var(--text-secondary);">N/A</span>';
+
+                const urgencyMap = {
+                    critical: { label: '🔴 Order Now', cls: 'urgency-critical' },
+                    soon: { label: '🟡 Order Soon', cls: 'urgency-soon' },
+                    ok: { label: '🟢 OK', cls: 'urgency-ok' },
+                    overstock: { label: '🔵 Overstocked', cls: 'urgency-overstock' }
+                };
+                const urg = urgencyMap[row.urgency] || urgencyMap.ok;
+
+                const barPct = Math.min(100, Math.round((row.stock / maxStock) * 100));
+                const barColor = row.urgency === 'critical' ? '#ef4444'
+                    : row.urgency === 'soon' ? '#f59e0b'
+                        : row.urgency === 'overstock' ? '#3b82f6'
+                            : '#10b981';
+
+                return `
+                    <tr>
+                        <td style="font-weight:600;">
+                            ${displayName}
+                            <div class="progress-bar-wrap">
+                                <div class="progress-bar" style="width:${barPct}%; background:${barColor};"></div>
+                            </div>
+                        </td>
+                        <td style="text-align:center; font-weight:700;">${row.stock}</td>
+                        <td style="text-align:center; color:var(--text-secondary);">${avgStr}/day</td>
+                        <td style="text-align:center; font-weight:700; color:${row.daysLeft <= 14 ? '#ef4444' : row.daysLeft <= 60 ? '#f59e0b' : 'var(--text-primary)'};">
+                            ${daysStr} days
+                        </td>
+                        <td style="text-align:center; font-weight:700; color:${row.reorderQty > 0 ? '#a78bfa' : 'var(--text-secondary)'};">
+                            ${row.reorderQty > 0 ? row.reorderQty + ' units' : '—'}
+                        </td>
+                        <td style="text-align:center;">${reorderDateStr}</td>
+                        <td style="text-align:center;"><span class="urgency-badge ${urg.cls}">${urg.label}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // --- AI ANALYSIS ---
+        async function runAiAnalysis() {
+            const btn = document.getElementById('ai-analyse-btn');
+            const section = document.getElementById('ai-section');
+            const loading = document.getElementById('ai-loading');
+            const response = document.getElementById('ai-response');
+
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Analysing...';
+            section.style.display = 'block';
+            loading.style.display = 'flex';
+            response.style.display = 'none';
+            response.textContent = '';
+
+            const critical = forecastData.filter(r => r.urgency === 'critical');
+            const soon = forecastData.filter(r => r.urgency === 'soon');
+            const overstock = forecastData.filter(r => r.urgency === 'overstock');
+
+            const summaryLines = forecastData
+                .filter(r =>
+                    r.avgDaily > 0 &&
+                    (
+                        r.urgency === 'critical' ||
+                        r.urgency === 'soon' ||
+                        r.urgency === 'overstock'
+                    )
+                )
+                .sort((a, b) => urgencyOrder(a.urgency) - urgencyOrder(b.urgency))
+                .map(r => {
+                    const name = window.formatProductName ? window.formatProductName(r.productName) : r.productName;
+                    return `- ${name}: ${r.stock} units in stock, ${r.avgDaily.toFixed(2)} units/day avg sales, ${r.daysLeft === Infinity ? 'no recent sales' : r.daysLeft + ' days of stock remaining'}, suggested reorder: ${r.reorderQty} units (status: ${r.urgency})`;
+                }).join('\n');
+
+            const prompt = `You are a warehouse inventory analyst for TKG (The Kettle Gourmet), a snack food company in Singapore.
+
+Your job is to analyse the stock data below and give a clear ordering recommendation for each product.
+
+STOCK DATA (based on all-time average daily sales, 60-day safety buffer):
+${summaryLines}
+
+SUMMARY:
+- ${critical.length} products need ordering NOW (under 14 days of stock left)
+- ${soon.length} products need ordering SOON (under 60 days of stock left)
+- ${overstock.length} products are overstocked (over 120 days of stock)
+
+YOUR TASK:
+For each product listed above, state exactly:
+1. How much stock to order (in units)
+2. When to place the order by
+3. Why (one short sentence based on burn rate)
+
+Then after the product list, provide:
+- Top 3 immediate actions to take today
+- Any overstock products to pause ordering on
+- One overall ordering strategy recommendation
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+
+## ORDERING RECOMMENDATIONS
+
+**[Product Name]**
+- Order: [X units]
+- Order By: [Date or ASAP]
+- Reason: [one sentence]
+
+(repeat for each product)
+
+---
+
+## IMMEDIATE ACTIONS
+1. [action]
+2. [action]
+3. [action]
+
+## PAUSE ORDERING
+- [product] — overstocked until approx [date]
+
+## STRATEGY RECOMMENDATION
+[2-3 sentences max]
+
+Be direct. No filler text. Numbers only where relevant.`;
+
+            try {
+                // Use a CORS proxy or backend relay
+                // Option 1: Use a free CORS proxy (for testing only)
+                const res = await fetch('https://yvjkkpntbceweojcriec.supabase.co/functions/v1/ai-forecast', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2amtrcG50YmNld2VvamNyaWVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzODIxNTIsImV4cCI6MjA4OTk1ODE1Mn0.nF5QCAoPAY07n0gY2-vW7lsGdPvFORnT2PoWSBgImDc'
+                    },
+                    body: JSON.stringify({ prompt })
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.error || `HTTP ${res.status}`);
+                }
+
+                const data = await res.json();
+                const text = data.text || 'No response received.';
+
+                loading.style.display = 'none';
+                response.style.display = 'block';
+                response.innerHTML = text
+                    .replace(/^## (.*?)$/gm, '<h3 style="color:#a78bfa; margin:1.2rem 0 0.5rem; font-size:1rem; text-transform:uppercase; letter-spacing:0.05em;">$1</h3>')
+                    .replace(/^---$/gm, '<hr style="border:none; border-top:1px solid rgba(255,255,255,0.1); margin:1rem 0;">')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary);">$1</strong>')
+                    .replace(/^- (.*?)$/gm, '<div style="padding:2px 0 2px 1rem; color:var(--text-secondary);">• $1</div>')
+                    .replace(/^\d\. (.*?)$/gm, '<div style="padding:2px 0 2px 1rem; color:var(--text-secondary);">$&</div>')
+                    .replace(/\n/g, '<br>');
+
+            } catch (e) {
+                loading.style.display = 'none';
+                response.style.display = 'block';
+                response.textContent = '❌ Failed to get AI analysis: ' + e.message;
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '✨ Run AI Analysis';
+        }
+
+        // --- INIT ---
+        async function init() {
+            try {
+                const [inv, led] = await Promise.all([
+                    window.AppDB.getLiveInventory(),
+                    window.AppDB.getRawLedger()
+                ]);
+
+                liveInventory = inv || {};
+                ledger = Array.isArray(led) ? led : [];
+
+                // Build forecast for all single products
+                if (typeof PRODUCT_CATALOG !== 'undefined') {
+                    const seen = new Set();
+                    for (const category in PRODUCT_CATALOG) {
+                        if (category === 'Aliases' || category === 'Merchandise' || category === 'Gift Box Barcodes') continue;
+                        for (const productName in PRODUCT_CATALOG[category]) {
+                            if (seen.has(productName)) continue;
+                            seen.add(productName);
+                            const product = PRODUCT_CATALOG[category][productName];
+                            if (product.type !== 'single') continue;
+                            if (EXCLUDED.includes(productName.toLowerCase())) continue;
+                            forecastData.push(computeForecast(productName));
+                        }
+                    }
+                }
+
+                renderTable();
+
+                // Bind filters
+                document.getElementById('forecast-search').addEventListener('input', renderTable);
+                document.getElementById('urgency-filter').addEventListener('change', renderTable);
+                document.getElementById('sort-filter').addEventListener('change', renderTable);
+
+            } catch (e) {
+                console.error('Failed to load forecast data', e);
+                document.getElementById('forecast-tbody').innerHTML =
+                    `<tr><td colspan="7" style="text-align:center; color:var(--danger); padding:3rem;">❌ Failed to load data: ${e.message}</td></tr>`;
+            }
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+
+</html>
