@@ -479,6 +479,426 @@ window.AppDB = {
     },
 
     // ==========================================
+    // REFUNDS
+    // ==========================================
+
+    async getRefunds() {
+        const { data, error } = await supabaseClient
+            .from('refund_logs')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            if (error.code === '42P01') return [];
+            throw error;
+        }
+
+        return (data || []).map(row => ({
+            id: row.id,
+            date: row.refund_date || row.date || '',
+            platform: row.platform,
+            awb: row.awb || '-',
+            orderId: row.order_id || '-',
+            customer: row.customer || '-',
+            reason: row.reason,
+            items: row.items,
+            notes: row.notes || '',
+            restock: !!row.restock,
+            status: row.status,
+            createdAt: row.created_at
+        }));
+    },
+
+    async saveRefund(record) {
+        const payload = {
+            id: record.id || `rfnd-${Date.now()}`,
+            refund_date: record.date,
+            platform: record.platform,
+            awb: record.awb || null,
+            order_id: record.orderId || null,
+            customer: record.customer || null,
+            reason: record.reason || null,
+            items: record.items || null,
+            notes: record.notes || null,
+            restock: !!record.restock,
+            status: record.status || 'Pending',
+            created_at: record.createdAt || new Date().toISOString()
+        };
+
+        const { data, error } = await supabaseClient
+            .from('refund_logs')
+            .insert(payload)
+            .select('*')
+            .single();
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            date: data.refund_date || data.date || '',
+            platform: data.platform,
+            awb: data.awb || '-',
+            orderId: data.order_id || '-',
+            customer: data.customer || '-',
+            reason: data.reason,
+            items: data.items,
+            notes: data.notes || '',
+            restock: !!data.restock,
+            status: data.status,
+            createdAt: data.created_at
+        };
+    },
+
+    async updateRefund(id, changes) {
+        const payload = {
+            updated_at: new Date().toISOString()
+        };
+
+        if (changes.status) payload.status = changes.status;
+        if (changes.notes !== undefined) payload.notes = changes.notes;
+        if (changes.restock !== undefined) payload.restock = !!changes.restock;
+
+        const { error } = await supabaseClient
+            .from('refund_logs')
+            .update(payload)
+            .eq('id', id);
+        if (error) throw error;
+    },
+
+    async deleteRefund(id) {
+        const { error } = await supabaseClient
+            .from('refund_logs')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+    },
+
+    // ==========================================
+    // RETURNS + INVENTORY MOVEMENTS
+    // ==========================================
+
+    async getReturns(limit = 200) {
+        const { data, error } = await supabaseClient
+            .from('returns')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            if (error.code === '42P01') return [];
+            throw error;
+        }
+
+        return (data || []).map(row => ({
+            id: row.id,
+            barcode: row.barcode,
+            sku: row.sku,
+            productName: row.product_name,
+            quantity: row.quantity,
+            returnReason: row.return_reason,
+            status: row.status,
+            scannedBy: row.scanned_by,
+            createdAt: row.created_at
+        }));
+    },
+
+    async getInventoryMovements(limit = 100) {
+        const { data, error } = await supabaseClient
+            .from('inventory_movements')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            if (error.code === '42P01') return [];
+            throw error;
+        }
+
+        return (data || []).map(row => ({
+            id: row.id,
+            sku: row.sku,
+            productName: row.product_name,
+            movementType: row.movement_type,
+            quantityChange: row.quantity_change,
+            previousQuantity: row.previous_quantity,
+            newQuantity: row.new_quantity,
+            createdAt: row.created_at,
+            referenceType: row.reference_type,
+            referenceId: row.reference_id,
+            scannedBy: row.scanned_by
+        }));
+    },
+
+    async findProductByBarcode(barcode) {
+        const clean = String(barcode || '').trim();
+        if (!clean) return null;
+
+        const { data, error } = await supabaseClient
+            .from('products')
+            .select('id, sku, barcodes, type, image, base_product, components, require_inner_scan')
+            .contains('barcodes', [clean])
+            .limit(1);
+
+        if (error) {
+            if (error.code === '42P01') return null;
+            throw error;
+        }
+
+        const row = data && data[0];
+        if (!row) return null;
+
+        return {
+            id: row.id,
+            name: row.id,
+            sku: row.sku || row.id,
+            type: row.type,
+            barcodes: row.barcodes || [],
+            image: row.image,
+            baseProduct: row.base_product,
+            contents: row.components || [],
+            requireInnerScan: row.require_inner_scan
+        };
+    },
+
+    async getProductStockQty(productName) {
+        const cName = canon(productName);
+        const { data, error } = await supabaseClient
+            .from('stock_ledger')
+            .select('transaction_type, qty')
+            .eq('product_name', cName);
+
+        if (error) throw error;
+
+        let total = 0;
+        (data || []).forEach(row => {
+            const isDeduction = row.transaction_type === 'OUTBOUND' || row.transaction_type === 'DEFECT';
+            total += isDeduction ? -row.qty : row.qty;
+        });
+        return total;
+    },
+
+    async processReturn(payload) {
+        const cName = canon(payload.productName || payload.product_name);
+        const status = payload.status || 'Restocked';
+        const params = {
+            p_barcode: payload.barcode,
+            p_sku: payload.sku || cName,
+            p_product_name: cName,
+            p_quantity: payload.quantity || 1,
+            p_return_reason: payload.returnReason || payload.return_reason || null,
+            p_status: status,
+            p_scanned_by: payload.scannedBy || payload.scanned_by || null,
+            p_notes: payload.notes || null
+        };
+
+        let previousQty = null;
+        let newQty = null;
+        let record = null;
+        let movement = null;
+
+        const { data: rpcData, error: rpcError } = await supabaseClient.rpc('process_return', params);
+        if (!rpcError && rpcData && rpcData.length > 0) {
+            previousQty = rpcData[0].previous_quantity;
+            newQty = rpcData[0].new_quantity;
+            const returnId = rpcData[0].return_id;
+
+            const { data: retRow, error: retErr } = await supabaseClient
+                .from('returns')
+                .select('*')
+                .eq('id', returnId)
+                .single();
+
+            if (!retErr) {
+                record = {
+                    id: retRow.id,
+                    barcode: retRow.barcode,
+                    sku: retRow.sku,
+                    productName: retRow.product_name,
+                    quantity: retRow.quantity,
+                    returnReason: retRow.return_reason,
+                    status: retRow.status,
+                    scannedBy: retRow.scanned_by,
+                    createdAt: retRow.created_at
+                };
+            }
+
+            return { record, previousQty, newQty, movement };
+        }
+
+        if (rpcError && rpcError.code !== '42883') {
+            throw rpcError;
+        }
+
+        previousQty = await this.getProductStockQty(cName);
+
+        const { data: returnRow, error: returnErr } = await supabaseClient
+            .from('returns')
+            .insert({
+                barcode: params.p_barcode,
+                sku: params.p_sku,
+                product_name: cName,
+                quantity: params.p_quantity,
+                return_reason: params.p_return_reason,
+                status: status,
+                scanned_by: params.p_scanned_by,
+                notes: params.p_notes,
+                restocked: status === 'Restocked'
+            })
+            .select('*')
+            .single();
+        if (returnErr) throw returnErr;
+
+        if (status === 'Restocked') {
+            const { error: ledgErr } = await supabaseClient.from('stock_ledger').insert({
+                product_name: cName,
+                transaction_type: 'RETURN',
+                qty: params.p_quantity,
+                reference_id: returnRow.id,
+                notes: 'Return restock'
+            });
+            if (ledgErr) throw ledgErr;
+        }
+
+        newQty = status === 'Restocked' ? previousQty + params.p_quantity : previousQty;
+
+        const { data: moveRow, error: moveErr } = await supabaseClient
+            .from('inventory_movements')
+            .insert({
+                sku: params.p_sku,
+                product_name: cName,
+                movement_type: status === 'Restocked' ? 'RETURN_RESTOCK' : 'RETURN_INTAKE',
+                quantity_change: status === 'Restocked' ? params.p_quantity : 0,
+                previous_quantity: previousQty,
+                new_quantity: newQty,
+                reference_type: 'returns',
+                reference_id: returnRow.id,
+                scanned_by: params.p_scanned_by,
+                notes: params.p_notes
+            })
+            .select('*')
+            .single();
+        if (moveErr) throw moveErr;
+
+        record = {
+            id: returnRow.id,
+            barcode: returnRow.barcode,
+            sku: returnRow.sku,
+            productName: returnRow.product_name,
+            quantity: returnRow.quantity,
+            returnReason: returnRow.return_reason,
+            status: returnRow.status,
+            scannedBy: returnRow.scanned_by,
+            createdAt: returnRow.created_at
+        };
+
+        movement = moveRow ? {
+            id: moveRow.id,
+            sku: moveRow.sku,
+            productName: moveRow.product_name,
+            movementType: moveRow.movement_type,
+            quantityChange: moveRow.quantity_change,
+            previousQuantity: moveRow.previous_quantity,
+            newQuantity: moveRow.new_quantity,
+            createdAt: moveRow.created_at
+        } : null;
+
+        return { record, previousQty, newQty, movement };
+    },
+
+    async undoReturn(returnId, scannedBy) {
+        const params = {
+            p_return_id: returnId,
+            p_scanned_by: scannedBy || null
+        };
+
+        const { data: rpcData, error: rpcError } = await supabaseClient.rpc('undo_return', params);
+        if (!rpcError && rpcData && rpcData.length > 0) {
+            return {
+                previousQty: rpcData[0].previous_quantity,
+                newQty: rpcData[0].new_quantity,
+                movement: null
+            };
+        }
+
+        if (rpcError && rpcError.code !== '42883') {
+            throw rpcError;
+        }
+
+        const { data: returnRow, error: retErr } = await supabaseClient
+            .from('returns')
+            .select('*')
+            .eq('id', returnId)
+            .single();
+        if (retErr) throw retErr;
+
+        const previousQty = await this.getProductStockQty(returnRow.product_name);
+        let newQty = previousQty;
+
+        if (returnRow.status === 'Restocked') {
+            const { error: ledgErr } = await supabaseClient.from('stock_ledger').insert({
+                product_name: returnRow.product_name,
+                transaction_type: 'OUTBOUND',
+                qty: returnRow.quantity,
+                reference_id: returnRow.id,
+                notes: 'Return undo'
+            });
+            if (ledgErr) throw ledgErr;
+            newQty = previousQty - returnRow.quantity;
+        }
+
+        const { error: updErr } = await supabaseClient
+            .from('returns')
+            .update({ status: 'Reverted', updated_at: new Date().toISOString() })
+            .eq('id', returnId);
+        if (updErr) throw updErr;
+
+        const { data: moveRow, error: moveErr } = await supabaseClient
+            .from('inventory_movements')
+            .insert({
+                sku: returnRow.sku,
+                product_name: returnRow.product_name,
+                movement_type: 'RETURN_UNDO',
+                quantity_change: returnRow.status === 'Restocked' ? -returnRow.quantity : 0,
+                previous_quantity: previousQty,
+                new_quantity: newQty,
+                reference_type: 'returns',
+                reference_id: returnRow.id,
+                scanned_by: scannedBy || returnRow.scanned_by,
+                notes: 'Undo last return'
+            })
+            .select('*')
+            .single();
+        if (moveErr) throw moveErr;
+
+        return {
+            previousQty,
+            newQty,
+            movement: moveRow
+        };
+    },
+
+    subscribeReturns(handler) {
+        if (!supabaseClient || typeof supabaseClient.channel !== 'function') return null;
+        const channel = supabaseClient
+            .channel('returns_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'returns' }, (payload) => {
+                if (typeof handler === 'function') handler(payload);
+            })
+            .subscribe();
+        return channel;
+    },
+
+    subscribeInventoryMovements(handler) {
+        if (!supabaseClient || typeof supabaseClient.channel !== 'function') return null;
+        const channel = supabaseClient
+            .channel('inventory_movements_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory_movements' }, (payload) => {
+                if (typeof handler === 'function') handler(payload);
+            })
+            .subscribe();
+        return channel;
+    },
+
+    // ==========================================
     // CATALOG & PRODUCTS
     // ==========================================
 
@@ -494,6 +914,7 @@ window.AppDB = {
         data.forEach(row => {
             map[row.id] = {
                 name: row.id,
+                sku: row.sku || row.id,
                 type: row.type,
                 barcodes: row.barcodes || [],
                 image: row.image,
@@ -508,6 +929,7 @@ window.AppDB = {
     async saveProduct(p) {
         const payload = {
             id: p.name,
+            sku: p.sku || null,
             type: p.type,
             barcodes: p.barcodes || [],
             image: p.image || null,

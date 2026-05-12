@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TKG Barcode Ops - Issue Management</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="refunds.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -808,6 +809,7 @@
                 </div>
                 <div class="page-tabs">
                     <button class="tab-btn active" data-issue-tab="refunds">Refunds</button>
+                    <button class="tab-btn" data-issue-tab="returns">Returns Processing</button>
                     <button class="tab-btn" data-issue-tab="defects">Defects</button>
                 </div>
             </div>
@@ -891,6 +893,214 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </section>
+
+            <section id="returns-section" class="tab-section">
+                <div class="returns-container">
+                    <div class="returns-hero">
+                        <div>
+                            <h2>Returns Processing</h2>
+                            <div class="issues-subtitle">Scan returns, restock inventory, and audit movements in one
+                                place.</div>
+                        </div>
+                        <div class="returns-actions">
+                            <button class="secondary-btn" id="returns-refresh-btn">Refresh</button>
+                            <button class="secondary-btn" id="returns-export-btn">Export CSV</button>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card" style="border-top: 3px solid #60a5fa;">
+                            <span class="stat-title">Total Returns Today</span>
+                            <span class="stat-value" id="returns-stat-today">0</span>
+                        </div>
+                        <div class="stat-card" style="border-top: 3px solid #a855f7;">
+                            <span class="stat-title">Total Refunded Items</span>
+                            <span class="stat-value" id="returns-stat-total-items">0</span>
+                        </div>
+                        <div class="stat-card" style="border-top: 3px solid #fbbf24;">
+                            <span class="stat-title">Most Returned SKU</span>
+                            <span class="stat-value" id="returns-stat-top-sku">-</span>
+                        </div>
+                        <div class="stat-card" style="border-top: 3px solid #34d399;">
+                            <span class="stat-title">Restocked Qty Today</span>
+                            <span class="stat-value" id="returns-stat-restocked">0</span>
+                        </div>
+                    </div>
+
+                    <div class="returns-scan-panel">
+                        <div class="returns-scan-header">
+                            <h3>Scan Returned Items</h3>
+                            <div class="returns-scan-actions">
+                                <label class="toggle-pill">
+                                    <input type="checkbox" id="returns-bulk-toggle">
+                                    Bulk scan mode
+                                </label>
+                                <label class="toggle-pill">
+                                    <input type="checkbox" id="returns-sound-toggle" checked>
+                                    Sound
+                                </label>
+                                <button class="action-btn btn-neutral" id="returns-undo-btn">Undo last scan</button>
+                            </div>
+                        </div>
+
+                        <div class="returns-scan-grid">
+                            <div class="form-group">
+                                <label>Scanner Input</label>
+                                <input type="text" id="returns-scan-input" class="filter-input returns-input"
+                                    placeholder="Scan barcode here">
+                            </div>
+                            <div class="form-group">
+                                <label>Manual Barcode</label>
+                                <div class="returns-inline">
+                                    <input type="text" id="returns-manual-input" class="filter-input returns-input"
+                                        placeholder="Type barcode">
+                                    <button class="action-btn btn-restock" id="returns-manual-submit">Process</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Quantity</label>
+                                <input type="number" id="returns-qty-input" class="filter-input returns-input" min="1"
+                                    value="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="returns-status-select" class="filter-input">
+                                    <option value="Restocked">Restocked</option>
+                                    <option value="Pending Inspection">Pending Inspection</option>
+                                    <option value="Damaged">Damaged</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Return Reason</label>
+                                <select id="returns-reason-select" class="filter-input">
+                                    <option value="Wrong Item Sent">Wrong Item Sent</option>
+                                    <option value="Damaged / Defective">Damaged / Defective</option>
+                                    <option value="Missing Items">Missing Items</option>
+                                    <option value="Customer Changed Mind">Customer Changed Mind</option>
+                                    <option value="Expired Product">Expired Product</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Scanned By</label>
+                                <input type="text" id="returns-scanned-by" class="filter-input returns-input"
+                                    placeholder="Operator name">
+                            </div>
+                        </div>
+
+                        <div class="returns-status-row">
+                            <div id="returns-scan-status" class="returns-scan-status">Ready to scan</div>
+                            <div id="returns-last-scan">Last scan: -</div>
+                        </div>
+                    </div>
+
+                    <div class="returns-layout">
+                        <div class="returns-column">
+                            <div class="returns-table-header">
+                                <h3>Recent Returns</h3>
+                                <div class="returns-filters">
+                                    <input type="text" id="returns-search-input" class="filter-input"
+                                        placeholder="Search SKU, product, barcode">
+                                    <select id="returns-status-filter" class="filter-input">
+                                        <option value="all">All Statuses</option>
+                                        <option value="Restocked">Restocked</option>
+                                        <option value="Pending Inspection">Pending Inspection</option>
+                                        <option value="Damaged">Damaged</option>
+                                        <option value="Reverted">Reverted</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>SKU / Product</th>
+                                            <th>Barcode</th>
+                                            <th>Qty</th>
+                                            <th>Status</th>
+                                            <th>Scanned By</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="returns-tbody">
+                                        <tr>
+                                            <td colspan="6"
+                                                style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
+                                                Loading returns...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="returns-column">
+                            <div class="returns-live-card">
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+                                    <h3 style="margin:0;">Live Inventory Update</h3>
+                                </div>
+                                <div class="returns-live-grid">
+                                    <div class="returns-live-item">
+                                        <span class="stat-title">Product</span>
+                                        <span class="returns-live-value" id="returns-live-product">-</span>
+                                    </div>
+                                    <div class="returns-live-item">
+                                        <span class="stat-title">SKU</span>
+                                        <span class="returns-live-value" id="returns-live-sku">-</span>
+                                    </div>
+                                    <div class="returns-live-item">
+                                        <span class="stat-title">Barcode</span>
+                                        <span class="returns-live-value" id="returns-live-barcode">-</span>
+                                    </div>
+                                    <div class="returns-live-item">
+                                        <span class="stat-title">Previous Qty</span>
+                                        <span class="returns-live-value" id="returns-live-prev">-</span>
+                                    </div>
+                                    <div class="returns-live-item">
+                                        <span class="stat-title">New Qty</span>
+                                        <span class="returns-live-value" id="returns-live-new">-</span>
+                                    </div>
+                                    <div class="returns-live-item">
+                                        <span class="stat-title">Updated</span>
+                                        <span class="returns-live-value" id="returns-live-time">-</span>
+                                    </div>
+                                </div>
+
+                                <div class="scan-history-list" id="returns-scan-history"></div>
+                            </div>
+
+                            <div class="returns-history-card">
+                                <div class="returns-history-header">
+                                    <h3 style="margin:0;">Inventory Movement History</h3>
+                                    <button class="action-btn btn-neutral"
+                                        id="returns-movements-refresh">Refresh</button>
+                                </div>
+                                <div class="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>SKU</th>
+                                                <th>Change</th>
+                                                <th>New Qty</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="returns-movements-tbody">
+                                            <tr>
+                                                <td colspan="4"
+                                                    style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                                    Loading movements...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
