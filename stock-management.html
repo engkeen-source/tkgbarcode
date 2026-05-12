@@ -633,6 +633,10 @@
                 <button class="primary-btn" id="inv-save-btn" style="background: var(--success);">Save Changes</button>
                 <button class="primary-btn" id="inb-save-btn" style="background: var(--success); display:none;"
                     onclick="saveData()">💾 Log & Sync Stock</button>
+                <button class="primary-btn" id="reset-stock-btn" onclick="resetAllStock()"
+                    style="background: var(--danger); display:flex; align-items:center; gap:0.5rem;">
+                    🗑️ Reset All Stock
+                </button>
             </div>
         </header>
 
@@ -976,6 +980,56 @@
         }
 
         updateList();
+
+        async function resetAllStock() {
+            // First confirmation
+            if (!confirm('⚠️ WARNING: Reset All Stock\n\nThis will permanently wipe ALL stock counts for every product back to zero.\n\nThis cannot be undone.\n\nAre you sure you want to continue?')) return;
+
+            // Second confirmation
+            if (!confirm('🔴 FINAL WARNING\n\nYou are about to delete all stock ledger entries.\n\nEvery product will show 0 units.\n\nType OK to confirm you understand this is permanent.')) return;
+
+            const btn = document.getElementById('reset-stock-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Wiping...';
+            btn.disabled = true;
+
+            try {
+                // Pull current Supabase client from the existing connection
+                const supabaseUrl = 'https://yvjkkpntbceweojcriec.supabase.co';
+                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2amtrcG50YmNld2VvamNyaWVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzODIxNTIsImV4cCI6MjA4OTk1ODE1Mn0.nF5QCAoPAY07n0gY2-vW7lsGdPvFORnT2PoWSBgImDc';
+                const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+                // Delete ALL rows from stock_ledger
+                const { error } = await client
+                    .from('stock_ledger')
+                    .delete()
+                    .neq('id', '00000000-0000-0000-0000-000000000000'); // deletes all rows
+
+                if (error) throw error;
+
+                // Show success
+                btn.innerHTML = '✅ Done!';
+                btn.style.background = 'var(--success)';
+
+                alert('✅ Stock Reset Complete!\n\nAll stock counts have been wiped to zero.\n\nYou can now re-enter your stock counts using Stock Inbound.');
+
+                // Reload the inventory grid if it exists
+                if (window._inventoryApp) {
+                    await window._inventoryApp.loadInventory();
+                }
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = 'var(--danger)';
+                    btn.disabled = false;
+                }, 3000);
+
+            } catch (e) {
+                alert('❌ Failed to reset stock: ' + e.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 
