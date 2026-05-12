@@ -1836,7 +1836,6 @@ const app = {
                 'CheeseYCC', 'SquidYCC', 'BarbequeYCC',
                 'ChocolatePP', 'CaramelPP',
                 'Jasmine', 'Osmanthus', 'POPCORNINKGPlain/Cheese',
-                'MPCS', 'MPKBT', 'MPCHC', 'Minions'
             ];
             standardKeys.forEach(k => allKeys.add(k));
 
@@ -1943,8 +1942,6 @@ const app = {
             // Verbose names like "the kettle gourmet air-popped popcorn made with premium butter chocolate"
             // These are 65g products but don't have "65g" in the name
             suffix = "65G";
-        } else if (n.includes('minion')) {
-            return "Minions";
         }
 
         if (suffix) {

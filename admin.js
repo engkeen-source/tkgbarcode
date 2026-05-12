@@ -38,15 +38,12 @@ function injectRequestedLinks() {
     if (!masterDB.mapping) masterDB.mapping = {};
 
     const oldToDelete = [
-        "The Kettle Gourmet Minions Popcorn 80g - Cheese / Chocolate / Kaya Butter Toast",
         "The Kettle Gourmet Bronys Brownie Crisps (108g) Chocolate Chip / Banana Fritter / Peanut Pancake Flavour"
     ];
     oldToDelete.forEach(k => delete masterDB.mapping[k]);
 
     const requested = {
-        "The Kettle Gourmet Minions Popcorn 80g - Cheese / Chocolate / Kaya Butter Toast Cheese": "minions holy cheese",
-        "The Kettle Gourmet Minions Popcorn 80g - Cheese / Chocolate / Kaya Butter Toast Chocolate": "minions chocolate",
-        "The Kettle Gourmet Minions Popcorn 80g - Cheese / Chocolate / Kaya Butter Toast Kaya Butter Toast": "minions kaya butter toast",
+
         "The Kettle Gourmet Bronys Brownie Crisps (108g) Chocolate Chip / Banana Fritter / Peanut Pancake Flavour Chocolate Chip": "brony chocolate chip",
         "The Kettle Gourmet Bronys Brownie Crisps (108g) Chocolate Chip / Banana Fritter / Peanut Pancake Flavour Banana Fritter": "brony banana fritter",
         "The Kettle Gourmet Bronys Brownie Crisps (108g) Chocolate Chip / Banana Fritter / Peanut Pancake Flavour Peanut Pancake": "brony peanut pancake",
@@ -87,7 +84,6 @@ function performOneTimeVariantMigration() {
         { regex: /65g/i, parent: 'Popcorn 65g' },
         { regex: /corn curls/i, parent: 'Yumi Corn Curls' },
         { regex: /corn stick/i, parent: 'Yumi Corn Sticks' },
-        { regex: /minions?(?!.*giftbox)/i, parent: 'Minions Popcorn' },
         { regex: /^poppa/i, parent: 'Poppa Popcorn' }
     ];
 
@@ -164,8 +160,8 @@ function switchSection(section) {
     const toolbar = document.getElementById('inventory-toolbar');
 
     // Show toolbar only on inventory section
-    if (toolbar) toolbar.style.display = 
-    (section === 'inventory' || section === 'giftboxes') ? 'flex' : 'none';
+    if (toolbar) toolbar.style.display =
+        (section === 'inventory' || section === 'giftboxes') ? 'flex' : 'none';
 
     // Reset search and filter when leaving inventory
     if (section !== 'inventory' && section !== 'giftboxes') {
@@ -179,22 +175,22 @@ function switchSection(section) {
     }
 
     document.querySelectorAll('.nav-item').forEach(btn => {
-    btn.classList.remove('active');
-});
+        btn.classList.remove('active');
+    });
 
-const sectionMap = {
-    'inventory': '📦 Master Inventory',
-    'giftboxes': '🎁 Gift Box Recipes',
-    'mapping': '🔗 Marketplace Links',
-    'scanner': '🔍 Marketplace Scanner',
-    'backups': '💾 Backup & Sync'
-};
+    const sectionMap = {
+        'inventory': '📦 Master Inventory',
+        'giftboxes': '🎁 Gift Box Recipes',
+        'mapping': '🔗 Marketplace Links',
+        'scanner': '🔍 Marketplace Scanner',
+        'backups': '💾 Backup & Sync'
+    };
 
-document.querySelectorAll('.nav-item').forEach(btn => {
-    if (btn.innerText.trim() === sectionMap[section]) {
-        btn.classList.add('active');
-    }
-});
+    document.querySelectorAll('.nav-item').forEach(btn => {
+        if (btn.innerText.trim() === sectionMap[section]) {
+            btn.classList.add('active');
+        }
+    });
 
     if (section === 'inventory') {
         title.innerText = "Master Inventory";
@@ -236,7 +232,7 @@ function updateFilters() {
         badge.textContent = activeFilters.length;
         badge.style.display = activeFilters.length ? 'inline' : 'none';
     }
-    
+
     if (currentSection === 'inventory') renderInventory();
     if (currentSection === 'giftboxes') renderRecipes();
 }
@@ -253,7 +249,7 @@ function clearFilters() {
     activeFilters = [];
     const badge = document.getElementById('filterBadge');
     if (badge) badge.style.display = 'none';
-    
+
     if (currentSection === 'inventory') renderInventory();
     if (currentSection === 'giftboxes') renderRecipes();
 }
@@ -648,10 +644,10 @@ function renderProductForm(p = null) {
                 <select id="p-base" class="form-control" style="width:100%; padding:0.75rem; border-radius:8px; background:#0f172a; border:1px solid var(--border); color:white;">
                     <option value="">No (This is a Standalone / Parent Product)</option>
                     ${Object.values(masterDB.products)
-                        .filter(prod => prod.type === 'single' && !prod.baseProduct && (!p || prod.name !== p.name))
-                        .sort((a, b) => a.name.localeCompare(b.name))
-                        .map(prod => `<option value="${prod.name}" ${p && p.baseProduct === prod.name ? 'selected' : ''}>Yes, variant of: ${prod.name}</option>`)
-                        .join('')}
+            .filter(prod => prod.type === 'single' && !prod.baseProduct && (!p || prod.name !== p.name))
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map(prod => `<option value="${prod.name}" ${p && p.baseProduct === prod.name ? 'selected' : ''}>Yes, variant of: ${prod.name}</option>`)
+            .join('')}
                 </select>
             </div>
 
@@ -863,34 +859,34 @@ function replicateFromTheCode() {
         'MayoCCones': 'yumi cheese corn stick', 'birthday': 'birthday sleeve',
         'newyear': 'new year sleeve', 'valentines': 'valentines sleeve',
         'nationalday': 'national day sleeve', 'childrensday': 'children day sleeve',
-        'minions': 'minions sleeve', 'teachers': 'teacher sleeve', 'huat': 'huat sleeve',
+        'teachers': 'teacher sleeve', 'huat': 'huat sleeve',
         'zhong': 'zhong sleeve', 'kou': 'kou sleeve', 'giftbox': 'gift box'
     };
 
     const legacyBundles = {
         "The Kettle Gourmet Birthday Gift Set (8 x 30g)": {
             shopeeKey: "thekettlegourmetpopcornbirthdaygiftset(assortmentof8packsx30g)",
-            items: ['CF30G','CC30G','CH30G','FHC30G','KBT30G','NL30G','PH30G','SC30G','birthday','giftbox']
+            items: ['CF30G', 'CC30G', 'CH30G', 'FHC30G', 'KBT30G', 'NL30G', 'PH30G', 'SC30G', 'birthday', 'giftbox']
         },
         "Assorted Mini Pack Popcorn Bundle Box (8 x 30g)": {
             shopeeKey: "thekettlegourmetoriginalminipackpopcornbundlebox(assortmentof8x30g)",
-            items: ['CF30G','CC30G','CH30G','FHC30G','KBT30G','NL30G','PH30G','SC30G','giftbox']
+            items: ['CF30G', 'CC30G', 'CH30G', 'FHC30G', 'KBT30G', 'NL30G', 'PH30G', 'SC30G', 'giftbox']
         },
         "Assorted Singles Popcorn Gift Box (8 x 65g)": {
             shopeeKey: "The Kettle Gourmet Assorted Singles Popcorn Gift Box (8 x 65g)",
-            items: ['CF65G','CC65G','CH65G','FHC65G','KBT65G','NL65G','PH65G','SC65G','giftbox']
+            items: ['CF65G', 'CC65G', 'CH65G', 'FHC65G', 'KBT65G', 'NL65G', 'PH65G', 'SC65G', 'giftbox']
         },
         "CNY HUAT Gift Set (Assorted)": {
             shopeeKey: "The Kettle Gourmet CNY HUAT Gift Set (Assortment of Snacks)",
-            items: ['KBT30G','FHC30G','CH30G','WheatCCones','CheeseYumi','ChocolateBrony35G','ChocolateBrony35G','MachaBrony35G','MachaBrony35G','NL30G','CF30G','SC30G','ChickenCCones','OriginalYumi','PH30G','CC30G','CS30G','MayoCCones','zhong','huat','kou','giftbox']
+            items: ['KBT30G', 'FHC30G', 'CH30G', 'WheatCCones', 'CheeseYumi', 'ChocolateBrony35G', 'ChocolateBrony35G', 'MachaBrony35G', 'MachaBrony35G', 'NL30G', 'CF30G', 'SC30G', 'ChickenCCones', 'OriginalYumi', 'PH30G', 'CC30G', 'CS30G', 'MayoCCones', 'zhong', 'huat', 'kou', 'giftbox']
         },
         "Valentine's Day Forever Love Gift Box": {
             shopeeKey: "The Kettle Gourmet Valentine's Day Forever Love Gift Box",
-            items: ['CF30G','CH30G','NL65G','SC65G','valentines','giftbox']
+            items: ['CF30G', 'CH30G', 'NL65G', 'SC65G', 'valentines', 'giftbox']
         },
         "National Day Bundle (8 x 30g)": {
             shopeeKey: "The Kettle Gourmet National Day Bundle (Assortment of 8 x 30g)",
-            items: ['CF30G','CC30G','CH30G','FHC30G','KBT30G','NL30G','PH30G','SC30G','nationalday','giftbox']
+            items: ['CF30G', 'CC30G', 'CH30G', 'FHC30G', 'KBT30G', 'NL30G', 'PH30G', 'SC30G', 'nationalday', 'giftbox']
         }
     };
 

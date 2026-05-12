@@ -67,12 +67,6 @@ const PRODUCT_CATALOG = {
         "brownie crisps (35g) matcha": { type: "single", barcodes: ["796548081150"], image: "" },
         "brownie crisps (35g) chocolate": { type: "single", barcodes: ["796548081167"], image: "" }
     },
-    "Minions": {
-        "minions  cheese": { type: "single", barcodes: ["796548081495"], image: "images/Minions/minionscheese.jpg" },
-        "minions chocolate": { type: "single", barcodes: ["796548081501"], image: "images/Minions/minionschocolate.jpg" },
-        "minions kaya butter toast": { type: "single", barcodes: ["796548081518"], image: "images/Minions/minionskbt.jpg" },
-        "minions giftbox": { type: "gift_box", barcodes: ["796548081525"], image: "" }
-    },
     "Merchandise": {
         "the kettle gourmet limited edition chinese new year ang pow (1pack 5pcs)": { type: "single", barcodes: ["meowmeow"], image: "" }
     },
@@ -559,7 +553,6 @@ const PREDEFINED_IMAGES = [
     "images/CornCurls/yumiCCCheese.jpg", "images/CornCurls/yumiCCSquid.jpg", "images/CornCurls/yumiCCbbq.jpg",
     "images/Cornstick/yumibqqcornstick.png", "images/Cornstick/yumicheesecornstick.png", "images/Cornstick/yumioriginalcornstick.png",
     "images/Logo.webp",
-    "images/Minions/minionscheese.jpg", "images/Minions/minionschocolate.jpg", "images/Minions/minionskbt.jpg",
     "images/Poppa/CHCPP.webp", "images/Poppa/SCPOPPA.webp",
     "images/randombullshitgo.jfif"
 ];
@@ -571,7 +564,6 @@ function normalizeName(name) {
     return String(name).toLowerCase()
         .replace(/bronys/g, "brony")
         .replace(/cookies/g, "cookie")
-        .replace(/minions/g, "minion")
         .replace(/[^a-z0-9]/g, "");
 }
 
