@@ -326,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+
             // Modal: Add Batch
             document.getElementById('modal-add-batch-btn').addEventListener('click', async () => {
                 if (!this.currentModalProduct) return;
@@ -394,38 +395,86 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Modal delegated inputs (Date Changes)
+            // Modal delegated inputs (Date Changes + Direct Stock Edit)
             document.getElementById('modal-batches-container').addEventListener('change', async (e) => {
                 const target = e.target;
                 if (!this.currentModalProduct) return;
 
+                // ── Date field changed ────────────────────────────
                 if (target.classList.contains('batch-date-input')) {
                     const oldExp = target.dataset.oldExp;
-                    const newExp = target.value;
                     const qty = parseInt(target.dataset.qty) || 0;
+                    let newExp = target.value.trim();
+
+                    // Convert DD/MM/YYYY → YYYY-MM-DD
+                    const dmyMatch = newExp.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+                    if (dmyMatch) {
+                        const [, dd, mm, yyyy] = dmyMatch;
+                        newExp = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                    }
+
+                    // Validate
+                    if (newExp && isNaN(new Date(newExp).getTime())) {
+                        alert('Invalid date. Please use DD/MM/YYYY format (e.g. 31/12/2026).');
+                        // Restore display value
+                        target.value = oldExp ? (([y, m, d]) => `${d}/${m}/${y}`)(oldExp.split('-')) : '';
+                        return;
+                    }
 
                     if (oldExp !== newExp && qty > 0) {
-                        if (!confirm(`Transfer ${qty} items from ${oldExp || "No Expiry"} to ${newExp}?`)) {
-                            target.value = oldExp; // revert UI
+                        if (!confirm(`Transfer ${qty} items from ${oldExp || 'No Expiry'} to ${newExp}?`)) {
+                            target.value = oldExp ? (([y, m, d]) => `${d}/${m}/${y}`)(oldExp.split('-')) : '';
                             return;
                         }
 
                         target.disabled = true;
                         try {
-                            const resolvedOldExp = (oldExp === "No Expiry" || !oldExp) ? "" : oldExp;
-                            const resolvedNewExp = (newExp === "No Expiry" || !newExp) ? "" : newExp;
+                            const resolvedOldExp = (oldExp === 'No Expiry' || !oldExp) ? '' : oldExp;
+                            const resolvedNewExp = (newExp === 'No Expiry' || !newExp) ? '' : newExp;
 
-                            await AppDB.insertAdjustment(this.currentModalProduct, -qty, resolvedOldExp, "Date Move - Remove old");
-                            await AppDB.insertAdjustment(this.currentModalProduct, qty, resolvedNewExp, "Date Move - Add new");
+                            await AppDB.insertAdjustment(this.currentModalProduct, -qty, resolvedOldExp, 'Date Move - Remove old');
+                            await AppDB.insertAdjustment(this.currentModalProduct, qty, resolvedNewExp, 'Date Move - Add new');
 
-                            await this.loadInventory(true); // refresh data only
+                            await this.loadInventory(true);
                             this.renderModalBatches();
                             this.updateCardStockDisplay(this.currentModalProduct);
                         } catch (err) {
-                            alert("Failed to change date: " + err.message);
-                            target.value = oldExp; // revert UI
+                            alert('Failed to change date: ' + err.message);
+                            target.value = oldExp ? (([y, m, d]) => `${d}/${m}/${y}`)(oldExp.split('-')) : '';
                             target.disabled = false;
                         }
+                    }
+                }
+
+                // ── Stock number typed directly ───────────────────
+                if (target.classList.contains('stock-input')) {
+                    const expiry = target.dataset.expiry || '';
+                    const originalQty = parseInt(target.dataset.originalQty) || 0;
+                    const newQty = parseInt(target.value);
+
+                    if (isNaN(newQty) || newQty < 0) {
+                        target.value = originalQty;
+                        return;
+                    }
+
+                    const delta = newQty - originalQty;
+                    if (delta === 0) return;
+
+                    if (!confirm(`Set stock to ${newQty} (${delta > 0 ? '+' : ''}${delta} adjustment)?`)) {
+                        target.value = originalQty;
+                        return;
+                    }
+
+                    target.disabled = true;
+                    try {
+                        await AppDB.insertAdjustment(this.currentModalProduct, delta, expiry, 'Manual Direct Edit');
+                        await this.loadInventory(true);
+                        this.renderModalBatches();
+                        this.updateCardStockDisplay(this.currentModalProduct);
+                    } catch (err) {
+                        alert('Failed to update stock: ' + err.message);
+                        target.value = originalQty;
+                        target.disabled = false;
                     }
                 }
             });
@@ -469,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                     <div class="stock-batch" style="flex-direction: column; align-items: flex-start; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                         <div style="display: flex; justify-content: space-between; width: 100%;">
-                            <input type="date" class="batch-date-input" data-old-exp="${b.expiry}" data-qty="${b.qty}" value="${b.expiry}">
+                            <input type="text" class="batch-date-input" data-old-exp="${b.expiry}" data-qty="${b.qty}" placeholder="DD/MM/YYYY" value="${b.expiry ? (([y, m, d]) => `${d}/${m}/${y}`)(b.expiry.split('-')) : ''}">
                             <button class="control-btn remove-batch-btn" data-expiry="${b.expiry}" data-qty="${b.qty}" style="color: var(--danger); font-size: 1.25rem; font-weight: bold; background: none; margin-left: auto;">×</button>
                         </div>
                         <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
@@ -479,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="stock-control mini" style="display: flex; align-items: center; gap: 6px;">
                                 <span style="font-size: 0.75rem; color: var(--text-secondary); margin-right: 4px;">Adjust:</span>
                                 <button class="control-btn minus-btn" data-expiry="${b.expiry}">−</button>
-                                <input type="number" class="stock-input" value="${b.qty}" readonly>
+                                <input type="number" class="stock-input" value="${b.qty}" data-expiry="${b.expiry}" data-original-qty="${b.qty}">
                                 <button class="control-btn plus-btn" data-expiry="${b.expiry}">+</button>
                             </div>
                         </div>
@@ -513,6 +562,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     };
 
-        window._inventoryApp = app;
-        app.init();
-    });
+    window._inventoryApp = app;
+    app.init();
+});
