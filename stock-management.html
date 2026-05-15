@@ -756,9 +756,11 @@
             document.getElementById('tab-' + tab).classList.add('active');
             btn.classList.add('active');
 
-            // Show/hide buttons without destroying them
+            // Show/hide buttons based on active tab
             document.getElementById('inv-save-btn').style.display = tab === 'inventory' ? 'inline-flex' : 'none';
             document.getElementById('inb-save-btn').style.display = tab === 'inbound' ? 'inline-flex' : 'none';
+            document.getElementById('reset-stock-btn').style.display = tab === 'inventory' ? 'inline-flex' : 'none';
+
 
             // Re-render inventory when switching back to inventory tab
             if (tab === 'inventory' && window._inventoryApp) {
