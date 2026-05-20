@@ -11,7 +11,6 @@ try {
         "bronys chocolate chip": "brownie crisps (108g) chocolate chip",
         "bronys peanut pancake": "brownie crisps (108g) peanut pancake",
         "matcha brony 35g": "brownie crisps (35g) matcha",
-        "chocolate brony 35g": "brownie crisps (35g) chocolate"
     };
     for (const [oldK, newK] of Object.entries(invMap)) {
         if (oldInv[oldK] !== undefined) {
@@ -65,7 +64,6 @@ const PRODUCT_CATALOG = {
         "brownie crisps (108g) chocolate chip": { type: "single", barcodes: ["796548081860"], image: "images/Bronys/BronyCHC108G.jpg" },
         "brownie crisps (108g) peanut pancake": { type: "single", barcodes: ["796548081877"], image: "images/Bronys/BronyPP108G.jpg" },
         "brownie crisps (35g) matcha": { type: "single", barcodes: ["796548081150"], image: "" },
-        "brownie crisps (35g) chocolate": { type: "single", barcodes: ["796548081167"], image: "" }
     },
     "Merchandise": {
         "the kettle gourmet limited edition chinese new year ang pow (1pack 5pcs)": { type: "single", barcodes: ["meowmeow"], image: "" }
@@ -412,7 +410,6 @@ const BUNDLE_CATALOG = {
                 { name: "Salted Caramel 30g", count: 1, barcodes: PRODUCT_DB["salted caramel 30g"] },
                 { name: "Pulut Hitam 30g", count: 1, barcodes: PRODUCT_DB["pulut hitam 30g"] },
                 { name: "Chilli Crab 30g", count: 1, barcodes: PRODUCT_DB["chilli crab 30g"] },
-                { name: "Brownie Crisps (35g) Chocolate", count: 2, barcodes: PRODUCT_DB["brownie crisps (35g) chocolate"] },
                 { name: "Brownie Crisps (35g) Matcha", count: 2, barcodes: PRODUCT_DB["brownie crisps (35g) matcha"] }
             ]
         },
@@ -438,7 +435,6 @@ const BUNDLE_CATALOG = {
                 { name: "Pulut Hitam 30g", count: 1, barcodes: PRODUCT_DB["pulut hitam 30g"] },
                 { name: "Yumi Original Corn Stick", count: 2, barcodes: PRODUCT_DB["yumi original corn stick"] },
                 { name: "Yumi BBQ Chicken Corn Stick", count: 1, barcodes: PRODUCT_DB["yumi bbq chicken corn stick"] },
-                { name: "Brownie Crisps (35g) Chocolate", count: 1, barcodes: PRODUCT_DB["brownie crisps (35g) chocolate"] },
                 { name: "Brownie Crisps (35g) Matcha", count: 1, barcodes: PRODUCT_DB["brownie crisps (35g) matcha"] },
                 { name: "Yumi Squid Corn Curls", count: 1, barcodes: PRODUCT_DB["yumi squid corn curls"] },
                 { name: "Yumi Cheese Corn Curls", count: 1, barcodes: PRODUCT_DB["yumi cheese corn curls"] },
@@ -478,7 +474,6 @@ const BUNDLE_CATALOG = {
         "bronys brownie crisps 4 x 35g assortment": {
             type: "bundle",
             contents: [
-                { name: "Brownie Crisps (35g) Chocolate", count: 2, barcodes: PRODUCT_DB["brownie crisps (35g) chocolate"] },
                 { name: "Brownie Crisps (35g) Matcha", count: 2, barcodes: PRODUCT_DB["brownie crisps (35g) matcha"] }
             ]
         },
@@ -488,7 +483,6 @@ const BUNDLE_CATALOG = {
                 { name: "Brownie Crisps (108g) Banana Fritter", count: 1, barcodes: PRODUCT_DB["brownie crisps (108g) banana fritter"] },
                 { name: "Brownie Crisps (108g) Chocolate Chip", count: 1, barcodes: PRODUCT_DB["brownie crisps (108g) chocolate chip"] },
                 { name: "Brownie Crisps (108g) Peanut Pancake", count: 1, barcodes: PRODUCT_DB["brownie crisps (108g) peanut pancake"] },
-                { name: "Brownie Crisps (35g) Chocolate", count: 1, barcodes: PRODUCT_DB["brownie crisps (35g) chocolate"] },
                 { name: "Brownie Crisps (35g) Matcha", count: 1, barcodes: PRODUCT_DB["brownie crisps (35g) matcha"] }
             ]
         }
@@ -585,7 +579,6 @@ window.formatProductName = function (name) {
         if (cleanName.includes('banana')) return "Brownie Crisps (108g) Banana Fritter";
         if (cleanName.includes('peanut')) return "Brownie Crisps (108g) Peanut Pancake";
         if (cleanName.includes('matcha')) return "Brownie Crisps (35g) Matcha";
-        if (cleanName.includes('chocolate') && cleanName.includes('35g')) return "Brownie Crisps (35g) Chocolate";
         if (cleanName.includes('chocolate')) return "Brownie Crisps (108g) Chocolate Chip";
     }
 
@@ -593,7 +586,6 @@ window.formatProductName = function (name) {
     if (cleanName === "brownie crisps (108g) chocolate chip") return "Brownie Crisps (108g) Chocolate Chip";
     if (cleanName === "brownie crisps (108g) peanut pancake") return "Brownie Crisps (108g) Peanut Pancake";
     if (cleanName === "brownie crisps (35g) matcha") return "Brownie Crisps (35g) Matcha";
-    if (cleanName === "brownie crisps (35g) chocolate") return "Brownie Crisps (35g) Chocolate";
 
     const rules = {
         "bbq": "BBQ",
