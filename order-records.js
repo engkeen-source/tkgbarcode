@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
         productStats: {},
         chartInstance: null,
         dataLoaded: false,
+        liveInventory: {},
+        computedStock: {},
+        reportResetAt: 0,
 
         async init() {
             this.cacheDom();
@@ -26,7 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 chartCanvas: document.getElementById('salesChart'),
                 statOutbound: document.getElementById('total-outbound-stat'),
                 statDefects: document.getElementById('total-defects-stat'),
-                statBestSeller: document.getElementById('best-seller-stat')
+                statBestSeller: document.getElementById('best-seller-stat'),
+                resetReportsBtn: document.getElementById('reset-reports-btn')
             };
         },
 
@@ -37,10 +41,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.dom.chartTimeframeFilter) {
                 this.dom.chartTimeframeFilter.addEventListener('change', () => this.updateChart());
             }
+            if (this.dom.resetReportsBtn) {
+                this.dom.resetReportsBtn.addEventListener('click', () => this.resetReports());
+            }
         },
 
         async loadData(force = false) {
             if (this.dataLoaded && !force) return;
+
+            this.reportResetAt = Number(localStorage.getItem('tkg_reports_reset_at') || 0);
 
             const ordersPromise = window.AppDB && window.AppDB.getOrders
                 ? window.AppDB.getOrders()
@@ -48,8 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const ledgerPromise = window.AppDB && window.AppDB.getRawLedger
                 ? window.AppDB.getRawLedger()
                 : Promise.resolve([]);
+            const inventoryPromise = window.AppDB && window.AppDB.getLiveInventory
+                ? window.AppDB.getLiveInventory()
+                : Promise.resolve({});
 
-            const [ordersRes, ledgerRes] = await Promise.allSettled([ordersPromise, ledgerPromise]);
+            const [ordersRes, ledgerRes, inventoryRes] = await Promise.allSettled([
+                ordersPromise,
+                ledgerPromise,
+                inventoryPromise
+            ]);
 
             if (ordersRes.status === 'fulfilled') {
                 this.orders = Array.isArray(ordersRes.value) ? ordersRes.value : [];
@@ -63,6 +79,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 console.error('Failed to load ledger', ledgerRes.reason);
                 this.ledger = [];
+            }
+
+            if (inventoryRes.status === 'fulfilled') {
+                this.liveInventory = inventoryRes.value || {};
+            } else {
+                console.error('Failed to load live inventory', inventoryRes.reason);
+                this.liveInventory = {};
             }
 
             this.dataLoaded = true;
@@ -109,8 +132,56 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         },
 
+        getLedgerDate(row) {
+            if (row?.created_at) {
+                const d = new Date(row.created_at);
+                if (!isNaN(d.getTime())) return d;
+            }
+            if (row?.date) {
+                const d = new Date(row.date);
+                if (!isNaN(d.getTime())) return d;
+            }
+            return null;
+        },
+
+        passesResetGate(date) {
+            if (!this.reportResetAt) return true;
+            if (!date || isNaN(date.getTime())) return true;
+            return date.getTime() >= this.reportResetAt;
+        },
+
+        shouldCountLedgerRow(row) {
+            if (!row) return false;
+            if (!this.passesResetGate(this.getLedgerDate(row))) return false;
+
+            if (row.reference_id === 'MANUAL_ADJUST') {
+                if (row.transaction_type === 'ADJUSTMENT') {
+                    return row.notes === 'Manual New Batch';
+                }
+                if (row.transaction_type === 'OUTBOUND') {
+                    return false;
+                }
+            }
+
+            return true;
+        },
+
+        computeDynamicStockMap() {
+            const stockMap = {};
+            const inv = this.liveInventory || {};
+
+            Object.entries(inv).forEach(([productName, rawBatches]) => {
+                const batches = this.getComputedBatches(rawBatches);
+                const total = batches.reduce((sum, b) => sum + b.qty, 0);
+                stockMap[this.canonName(productName)] = total;
+            });
+
+            this.computedStock = stockMap;
+        },
+
         processData() {
             this.productStats = {};
+            this.computeDynamicStockMap();
 
             // Pre-seed ALL known single products from catalog
             // so products with zero activity still appear in the table
@@ -158,6 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (Array.isArray(this.ledger)) {
                 this.ledger.forEach((row) => {
                     if (!row) return;
+                    if (!this.shouldCountLedgerRow(row)) return;
                     if (
                         row.transaction_type === 'OUTBOUND' &&
                         row.reference_id &&
@@ -180,6 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (Array.isArray(this.ledger)) {
                 this.ledger.forEach((row) => {
                     if (!row || row.transaction_type !== 'OUTBOUND') return;
+                    if (!this.shouldCountLedgerRow(row)) return;
                     if (row.reference_id && cancelledOrderIds.has(String(row.reference_id))) return;
 
                     const name = initProduct(row.product_name);
@@ -216,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!isComplete) return;
 
                     const d = this.getOrderDate(order);
+                    if (!this.passesResetGate(d)) return;
                     if (!d) return;
 
                     const monthKey = d.toLocaleString('default', { month: 'short', year: 'numeric' });
@@ -285,7 +359,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const productRows = Object.keys(this.productStats).map((name) => {
                 const stat = this.productStats[name];
-                const dynStock = stat.inbound - stat.outbound - stat.defects;
+                const hasComputed = Object.prototype.hasOwnProperty.call(this.computedStock, name);
+                const dynStock = hasComputed
+                    ? this.computedStock[name]
+                    : stat.inbound - stat.outbound - stat.defects;
                 totalOutboundAll += stat.outbound;
                 totalDefectsAll += stat.defects;
                 return { name, ...stat, dynStock };
@@ -465,7 +542,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async loadStockReports() {
             try {
-                const liveInventory = await window.AppDB.getLiveInventory();
+                let liveInventory = this.liveInventory;
+                if (!liveInventory || Object.keys(liveInventory).length === 0) {
+                    liveInventory = await window.AppDB.getLiveInventory();
+                    this.liveInventory = liveInventory || {};
+                }
                 this.renderLowStockReport(liveInventory);
                 this.renderExpiringReport(liveInventory);
 
@@ -957,6 +1038,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     }).join('');
                 }
             }
+        },
+
+        resetReports() {
+            if (!confirm('Reset reports data? This clears inbound/outbound totals and charts. Stock levels are not affected.')) return;
+            if (!confirm('This will only affect report numbers shown on this page. Continue?')) return;
+
+            const now = Date.now();
+            localStorage.setItem('tkg_reports_reset_at', String(now));
+            this.reportResetAt = now;
+            this.refreshAnalytics();
         },
     };
 

@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Global image fallback — called from onerror on every product card image.
     // Defined here (not inline) to avoid JS quote-escaping issues inside HTML attributes.
-    window._imgFallback = function(el) {
+    window._imgFallback = function (el) {
         el.onerror = null;
         const div = document.createElement('div');
         div.className = 'product-img';
@@ -21,8 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
         defects: [],
         currentCategory: 'all',
         searchTerm: '',
+        batchEditorMode: 'stacked',
 
         async init() {
+            this.batchEditorMode = document.getElementById('tab-inventory') ? 'table' : 'stacked';
             this.bindEvents();
             // Show loading state if grid exists
             const grid = document.getElementById('inventory-grid');
@@ -69,6 +71,158 @@ document.addEventListener('DOMContentLoaded', () => {
 
         formatProductName(name) {
             return window.formatProductName ? window.formatProductName(name) : name;
+        },
+
+        formatDisplayDate(isoDate) {
+            if (!isoDate) return '';
+            const parts = String(isoDate).split('-');
+            if (parts.length !== 3) return isoDate;
+            return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        },
+
+        parseDateInput(rawValue) {
+            const value = String(rawValue || '').trim();
+            if (!value) return { iso: '', display: '' };
+
+            let yyyy;
+            let mm;
+            let dd;
+
+            const isoMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            const ymdMatch = value.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+            const dmyMatch = value.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+            const digitsMatch = value.match(/^(\d{2})(\d{2})(\d{4})$/);
+
+            if (isoMatch) {
+                [, yyyy, mm, dd] = isoMatch;
+            } else if (ymdMatch) {
+                [, yyyy, mm, dd] = ymdMatch;
+            } else if (dmyMatch) {
+                [, dd, mm, yyyy] = dmyMatch;
+            } else if (digitsMatch) {
+                [, dd, mm, yyyy] = digitsMatch;
+            } else {
+                return null;
+            }
+
+            const y = parseInt(yyyy, 10);
+            const m = parseInt(mm, 10);
+            const d = parseInt(dd, 10);
+
+            if (!y || !m || !d) return null;
+
+            const date = new Date(Date.UTC(y, m - 1, d));
+            if (date.getUTCFullYear() !== y || date.getUTCMonth() + 1 !== m || date.getUTCDate() !== d) return null;
+
+            const iso = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const display = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${String(y).padStart(4, '0')}`;
+            return { iso, display };
+        },
+
+        setRowExpiry(row, isoDate, displayDate) {
+            if (!row) return;
+            const expiry = isoDate || '';
+            row.querySelectorAll('[data-expiry]').forEach(el => {
+                el.dataset.expiry = expiry;
+            });
+
+            const dateInput = row.querySelector('.batch-date-input');
+            if (dateInput) {
+                dateInput.dataset.oldExp = expiry;
+                if (displayDate !== undefined) {
+                    dateInput.value = displayDate;
+                }
+            }
+
+            const datePicker = row.querySelector('.batch-date-picker');
+            if (datePicker) {
+                datePicker.value = expiry;
+            }
+        },
+
+        resolveRowExpiry(row, existingExpiry) {
+            if (existingExpiry !== undefined && existingExpiry !== null && existingExpiry !== '') return existingExpiry;
+            const dateInput = row ? row.querySelector('.batch-date-input') : null;
+            if (!dateInput) return '';
+            const parsed = this.parseDateInput(dateInput.value);
+            if (!parsed) {
+                alert('Invalid date. Please use DD/MM/YYYY format (e.g. 31/12/2026).');
+                return null;
+            }
+            this.setRowExpiry(row, parsed.iso, parsed.display);
+            return parsed.iso;
+        },
+
+        getBatchHeaderMarkup() {
+            return `
+                <div class="batch-row batch-row--header">
+                    <div class="batch-cell batch-expiry">Expiry Date</div>
+                    <div class="batch-cell batch-live">Live Stock</div>
+                    <div class="batch-cell batch-adjust">Adjust</div>
+                    <div class="batch-cell batch-remove">Remove</div>
+                </div>
+            `;
+        },
+
+        getBatchRowMarkup(batch, options = {}) {
+            const qty = Number(batch.qty) || 0;
+            const expiryIso = batch.expiry || '';
+            const displayDate = this.formatDisplayDate(expiryIso);
+            const remColor = qty < 0 ? 'var(--danger)' : 'var(--accent)';
+            const isNewRow = options.isNewRow ? ' data-new-row="1"' : '';
+            const isNewClass = options.isNewRow ? ' is-new' : '';
+
+            if (this.batchEditorMode === 'table') {
+                return `
+                    <div class="batch-row batch-row--data${isNewClass}"${isNewRow}>
+                        <div class="batch-cell batch-expiry">
+                            <div class="batch-date-wrap">
+                                <input type="text" class="batch-date-input" data-old-exp="${expiryIso}" data-qty="${qty}" placeholder="DD/MM/YYYY" value="${displayDate}" inputmode="numeric" autocomplete="off">
+                                <button type="button" class="control-btn calendar-btn" title="Pick date">📅</button>
+                                <input type="date" class="batch-date-picker" value="${expiryIso}">
+                            </div>
+                        </div>
+                        <div class="batch-cell batch-live">
+                            <span class="batch-live-label">Live</span>
+                            <strong class="batch-live-value" style="color: ${remColor};">${qty}</strong>
+                        </div>
+                        <div class="batch-cell batch-adjust">
+                            <div class="stock-control mini" style="display: flex; align-items: center; gap: 6px;">
+                                <button class="control-btn minus-btn" data-expiry="${expiryIso}">−</button>
+                                <input type="number" class="stock-input" value="${qty}" data-expiry="${expiryIso}" data-original-qty="${qty}" inputmode="numeric" min="0">
+                                <button class="control-btn plus-btn" data-expiry="${expiryIso}">+</button>
+                            </div>
+                        </div>
+                        <div class="batch-cell batch-remove">
+                            <button class="control-btn remove-batch-btn" data-expiry="${expiryIso}" data-qty="${qty}" title="Remove batch">×</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="stock-batch"${isNewRow} style="flex-direction: column; align-items: flex-start; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <div class="batch-date-wrap">
+                            <input type="text" class="batch-date-input" data-old-exp="${expiryIso}" data-qty="${qty}" placeholder="DD/MM/YYYY" value="${displayDate}" inputmode="numeric" autocomplete="off">
+                            <button type="button" class="control-btn calendar-btn" title="Pick date">📅</button>
+                            <input type="date" class="batch-date-picker" value="${expiryIso}">
+                        </div>
+                        <button class="control-btn remove-batch-btn" data-expiry="${expiryIso}" data-qty="${qty}" style="color: var(--danger); font-size: 1.25rem; font-weight: bold; background: none; margin-left: auto;">×</button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                            Live Stock: <strong style="color: ${remColor}; font-size: 1.1rem;">${qty}</strong>
+                        </div>
+                        <div class="stock-control mini" style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); margin-right: 4px;">Adjust:</span>
+                            <button class="control-btn minus-btn" data-expiry="${expiryIso}">−</button>
+                            <input type="number" class="stock-input" value="${qty}" data-expiry="${expiryIso}" data-original-qty="${qty}" inputmode="numeric" min="0">
+                            <button class="control-btn plus-btn" data-expiry="${expiryIso}">+</button>
+                        </div>
+                    </div>
+                </div>
+            `;
         },
 
         async loadInventory(skipRender = false) {
@@ -339,23 +493,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // Modal: Add Batch
-            document.getElementById('modal-add-batch-btn').addEventListener('click', async () => {
+            document.getElementById('modal-add-batch-btn').addEventListener('click', () => {
                 if (!this.currentModalProduct) return;
-
-                const q = prompt("How many items are in this new batch? (e.g. 10)", "10");
-                if (!q || isNaN(q) || parseInt(q) <= 0) return;
-
-                const d = prompt("Enter the Expiry Date for this new batch (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
-                if (d === null) return; // User cancelled
-
-                try {
-                    await window.AppDB.insertAdjustment(this.currentModalProduct, parseInt(q), d, "Manual New Batch");
-                    await this.loadInventory(true); // refresh data only, no full grid re-render
-                    this.renderModalBatches();
-                    this.updateCardStockDisplay(this.currentModalProduct);
-                } catch (e) {
-                    alert("Failed to add batch: " + e.message);
-                }
+                this.insertEmptyBatchRow();
             });
 
             // Modal delegated clicks (Plus/Minus/Remove)
@@ -363,9 +503,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 const target = e.target;
                 if (!this.currentModalProduct) return;
 
+                if (target.classList.contains('calendar-btn')) {
+                    const row = target.closest('.batch-row') || target.closest('.stock-batch');
+                    const picker = row ? row.querySelector('.batch-date-picker') : null;
+                    if (picker) {
+                        if (picker.showPicker) {
+                            picker.showPicker();
+                        } else {
+                            picker.focus();
+                            picker.click();
+                        }
+                    }
+                    return;
+                }
+
                 if (target.classList.contains('remove-batch-btn')) {
                     const expiry = target.dataset.expiry;
                     const qtyToClear = parseInt(target.dataset.qty) || 0;
+                    const row = target.closest('.batch-row') || target.closest('.stock-batch');
+                    const isNewRow = row && row.dataset.newRow === '1';
+
+                    if (isNewRow && qtyToClear <= 0) {
+                        row.remove();
+                        return;
+                    }
 
                     if (qtyToClear > 0) {
                         if (!confirm("Remove this exact batch tracking?")) return;
@@ -382,16 +543,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 } else if (target.classList.contains('control-btn') && !target.classList.contains('remove-batch-btn')) {
-                    const expiry = target.dataset.expiry;
+                    const row = target.closest('.batch-row') || target.closest('.stock-batch');
+                    let expiry = target.dataset.expiry || '';
                     const isPlus = target.classList.contains('plus-btn');
 
                     target.disabled = true;
                     try {
+                        const resolved = this.resolveRowExpiry(row, expiry);
+                        if (resolved === null) {
+                            target.disabled = false;
+                            return;
+                        }
+                        expiry = resolved;
+
                         if (isPlus) {
                             await AppDB.insertAdjustment(this.currentModalProduct, 1, expiry, "Manual +1 Edit");
                         } else {
                             // verify they have stock to deduct
-                            const qty = parseInt(target.parentElement.querySelector('.stock-input').value) || 0;
+                            const qtyInput = row ? row.querySelector('.stock-input') : target.parentElement.querySelector('.stock-input');
+                            const qty = parseInt(qtyInput && qtyInput.value, 10) || 0;
                             if (qty > 0) {
                                 await AppDB.insertAdjustment(this.currentModalProduct, -1, expiry, "Manual -1 Edit");
                             }
@@ -406,19 +576,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Modal delegated inputs (Date Changes)
+            // Modal delegated inputs (Date + Qty Changes)
             document.getElementById('modal-batches-container').addEventListener('change', async (e) => {
                 const target = e.target;
                 if (!this.currentModalProduct) return;
 
+                if (target.classList.contains('batch-date-picker')) {
+                    const row = target.closest('.batch-row') || target.closest('.stock-batch');
+                    const textInput = row ? row.querySelector('.batch-date-input') : null;
+                    if (textInput) {
+                        textInput.value = this.formatDisplayDate(target.value);
+                        textInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    return;
+                }
+
                 if (target.classList.contains('batch-date-input')) {
-                    const oldExp = target.dataset.oldExp;
-                    const newExp = target.value;
-                    const qty = parseInt(target.dataset.qty) || 0;
+                    const row = target.closest('.batch-row') || target.closest('.stock-batch');
+                    const isNewRow = row && row.dataset.newRow === '1';
+                    const oldExp = target.dataset.oldExp || '';
+                    const qty = parseInt(target.dataset.qty, 10) || 0;
+                    const parsed = this.parseDateInput(target.value);
+
+                    if (!parsed) {
+                        alert('Invalid date. Please use DD/MM/YYYY format (e.g. 31/12/2026).');
+                        target.value = this.formatDisplayDate(oldExp);
+                        return;
+                    }
+
+                    const newExp = parsed.iso;
+                    target.value = parsed.display;
+
+                    if (isNewRow) {
+                        this.setRowExpiry(row, newExp, parsed.display);
+                        return;
+                    }
 
                     if (oldExp !== newExp && qty > 0) {
-                        if (!confirm(`Transfer ${qty} items from ${oldExp || "No Expiry"} to ${newExp}?`)) {
-                            target.value = oldExp; // revert UI
+                        if (!confirm(`Transfer ${qty} items from ${oldExp || "No Expiry"} to ${newExp || "No Expiry"}?`)) {
+                            target.value = this.formatDisplayDate(oldExp); // revert UI
                             return;
                         }
 
@@ -435,10 +631,61 @@ document.addEventListener('DOMContentLoaded', () => {
                             this.updateCardStockDisplay(this.currentModalProduct);
                         } catch (err) {
                             alert("Failed to change date: " + err.message);
-                            target.value = oldExp; // revert UI
+                            target.value = this.formatDisplayDate(oldExp); // revert UI
                             target.disabled = false;
                         }
+                    } else if (oldExp !== newExp && qty <= 0) {
+                        this.setRowExpiry(row, newExp, parsed.display);
                     }
+                }
+
+                if (target.classList.contains('stock-input')) {
+                    const row = target.closest('.batch-row') || target.closest('.stock-batch');
+                    let expiry = target.dataset.expiry || '';
+                    const originalQty = parseInt(target.dataset.originalQty, 10) || 0;
+                    const newQty = parseInt(target.value, 10);
+
+                    if (isNaN(newQty) || newQty < 0) {
+                        target.value = originalQty;
+                        return;
+                    }
+
+                    const delta = newQty - originalQty;
+                    if (delta === 0) return;
+
+                    if (!expiry) {
+                        const resolved = this.resolveRowExpiry(row, expiry);
+                        if (resolved === null) {
+                            target.value = originalQty;
+                            return;
+                        }
+                        expiry = resolved;
+                    }
+
+                    if (!confirm(`Set stock to ${newQty} (${delta > 0 ? '+' : ''}${delta} adjustment)?`)) {
+                        target.value = originalQty;
+                        return;
+                    }
+
+                    target.disabled = true;
+                    try {
+                        await AppDB.insertAdjustment(this.currentModalProduct, delta, expiry, 'Manual Direct Edit');
+                        await this.loadInventory(true);
+                        this.renderModalBatches();
+                        this.updateCardStockDisplay(this.currentModalProduct);
+                    } catch (err) {
+                        alert('Failed to update stock: ' + err.message);
+                        target.value = originalQty;
+                        target.disabled = false;
+                    }
+                }
+            });
+
+            document.getElementById('modal-batches-container').addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter') return;
+                if (e.target.classList.contains('batch-date-input') || e.target.classList.contains('stock-input')) {
+                    e.preventDefault();
+                    e.target.blur();
                 }
             });
 
@@ -458,6 +705,31 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('batch-modal').classList.add('active');
         },
 
+        insertEmptyBatchRow() {
+            const container = document.getElementById('modal-batches-container');
+            if (!container) return;
+
+            const markup = this.getBatchRowMarkup({ expiry: '', qty: 0 }, { isNewRow: true });
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = markup.trim();
+            const row = wrapper.firstElementChild;
+            if (!row) return;
+
+            if (this.batchEditorMode === 'table') {
+                let table = container.querySelector('.batch-table');
+                if (!table) {
+                    container.innerHTML = `<div class="batch-table">${this.getBatchHeaderMarkup()}</div>`;
+                    table = container.querySelector('.batch-table');
+                }
+                table.appendChild(row);
+            } else {
+                container.appendChild(row);
+            }
+
+            const input = row.querySelector('.batch-date-input');
+            if (input) input.focus();
+        },
+
         renderModalBatches() {
             if (!this.currentModalProduct) return;
 
@@ -475,29 +747,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // Map computedQty to qty for the DOM renderer
             batches = batches.map(b => ({ expiry: b.expiry === "No Expiry" ? "" : b.expiry, qty: b.computedQty }));
 
-            container.innerHTML = batches.map((b) => {
-                const remColor = b.qty < 0 ? 'var(--danger)' : 'var(--accent)';
+            const rowsMarkup = batches.map((b) => this.getBatchRowMarkup(b)).join('');
 
-                return `
-                    <div class="stock-batch" style="flex-direction: column; align-items: flex-start; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                        <div style="display: flex; justify-content: space-between; width: 100%;">
-                            <input type="date" class="batch-date-input" data-old-exp="${b.expiry}" data-qty="${b.qty}" value="${b.expiry}">
-                            <button class="control-btn remove-batch-btn" data-expiry="${b.expiry}" data-qty="${b.qty}" style="color: var(--danger); font-size: 1.25rem; font-weight: bold; background: none; margin-left: auto;">×</button>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                Live Stock: <strong style="color: ${remColor}; font-size: 1.1rem;">${b.qty}</strong>
-                            </div>
-                            <div class="stock-control mini" style="display: flex; align-items: center; gap: 6px;">
-                                <span style="font-size: 0.75rem; color: var(--text-secondary); margin-right: 4px;">Adjust:</span>
-                                <button class="control-btn minus-btn" data-expiry="${b.expiry}">−</button>
-                                <input type="number" class="stock-input" value="${b.qty}" readonly>
-                                <button class="control-btn plus-btn" data-expiry="${b.expiry}">+</button>
-                            </div>
-                        </div>
+            if (this.batchEditorMode === 'table') {
+                container.innerHTML = `
+                    <div class="batch-table">
+                        ${this.getBatchHeaderMarkup()}
+                        ${rowsMarkup}
                     </div>
-                    `;
-            }).join('');
+                `;
+            } else {
+                container.innerHTML = rowsMarkup;
+            }
 
             // Dynamic Details
             const infoDiv = document.getElementById('modal-dynamic-info');
@@ -525,6 +786,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     };
 
-        window._inventoryApp = app;
-        app.init();
-    });
+    window._inventoryApp = app;
+    app.init();
+});

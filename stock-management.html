@@ -397,6 +397,114 @@
             max-width: 120px;
         }
 
+        .batch-date-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            position: relative;
+        }
+
+        .batch-date-wrap .batch-date-input {
+            max-width: none;
+            width: 100%;
+        }
+
+        .calendar-btn {
+            width: 32px;
+            height: 32px;
+            font-size: 0.9rem;
+        }
+
+        .batch-date-picker {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+            width: 1px;
+            height: 1px;
+        }
+
+        .batch-table {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .batch-row {
+            display: grid;
+            grid-template-columns: minmax(150px, 1.2fr) 110px minmax(160px, 1fr) 36px;
+            grid-template-areas: "expiry live adjust remove";
+            gap: 0.75rem;
+            align-items: center;
+            background: var(--bg-app);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 0.65rem 0.75rem;
+            border-radius: 12px;
+        }
+
+        .batch-row--header {
+            background: transparent;
+            border: none;
+            padding: 0 0.25rem;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+        }
+
+        .batch-row--header .batch-cell {
+            justify-content: flex-start;
+        }
+
+        .batch-row--data.is-new {
+            border-style: dashed;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .batch-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .batch-expiry {
+            grid-area: expiry;
+        }
+
+        .batch-live {
+            grid-area: live;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .batch-live-value {
+            font-size: 1.05rem;
+        }
+
+        .batch-adjust {
+            grid-area: adjust;
+            justify-content: flex-start;
+        }
+
+        .batch-remove {
+            grid-area: remove;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 640px) {
+            .batch-row {
+                grid-template-columns: 1fr 1fr;
+                grid-template-areas:
+                    "expiry remove"
+                    "live live"
+                    "adjust adjust";
+            }
+
+            .batch-row--header {
+                display: none;
+            }
+        }
+
         .stock-control.mini {
             margin-top: 0;
             padding: 0;
