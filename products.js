@@ -82,22 +82,6 @@ const PRODUCT_CATALOG = {
         "The Kettle Gourmet CNY HUAT Gift Set (8packs x 30g Popcorn) Red Dragon (红中)": { type: "gift_box", barcodes: ["796548081723"], image: "" },
         "The Kettle Gourmet CNY HUAT Gift Set (8packs x 30g Popcorn) White Dragon (白板)": { type: "gift_box", barcodes: ["796548081730"], image: "" }
     },
-    "Aliases": {
-        "the kettle gourmet air-popped popcorn made with premium butter chocolate": { type: "single", barcodes: ["793618011932"], image: "images/65gProducts/CHC65G.png" },
-        "the kettle gourmet air-popped popcorn made with premium butter salted caramel": { type: "single", barcodes: ["793591857138"], image: "images/65gProducts/SC65G.png" },
-        "the kettle gourmet air-popped popcorn made with premium butter kaya butter toast": { type: "single", barcodes: ["793591857121"], image: "images/65gProducts/KBT65G.png" },
-        "the kettle gourmet air-popped popcorn made with premium butter nasi lemak": { type: "single", barcodes: ["793591857114"], image: "images/65gProducts/NL65G.png" },
-        "the kettle gourmet air-popped popcorn made with premium butter chilli crab": { type: "single", barcodes: ["793591857107"], image: "images/65gProducts/CC65G.png" },
-        "the kettle gourmet air-popped popcorn made with premium butter chicken floss": { type: "single", barcodes: ["793618011949"], image: "images/65gProducts/CF65G.png" },
-        "the kettle gourmet air-popped popcorn made with premium butter pulut hitam": { type: "single", barcodes: ["794712851813"], image: "images/65gProducts/PH65G.png" },
-        "the kettle gourmet flavoured popcorn made with premium butter chicken floss": { type: "single", barcodes: ["793618011949"], image: "images/65gProducts/CF65G.png" },
-        "the kettle gourmet flavoured popcorn made with premium butter pulut hitam": { type: "single", barcodes: ["794712851813"], image: "images/65gProducts/PH65G.png" },
-        "the kettle gourmet flavoured popcorn made with premium butter chilli crab": { type: "single", barcodes: ["793591857107"], image: "images/65gProducts/CC65G.png" },
-        "the kettle gourmet flavoured popcorn made with premium butter nasi lemak": { type: "single", barcodes: ["793591857114"], image: "images/65gProducts/NL65G.png" },
-        "the kettle gourmet flavoured popcorn made with premium butter kaya butter toast": { type: "single", barcodes: ["793591857121"], image: "images/65gProducts/KBT65G.png" },
-        "the kettle gourmet flavoured popcorn made with premium butter salted caramel": { type: "single", barcodes: ["793591857138"], image: "images/65gProducts/SC65G.png" },
-        "the kettle gourmet flavoured popcorn made with premium butter chocolate": { type: "single", barcodes: ["793618011932"], image: "images/65gProducts/CHC65G.png" }
-    }
 };
 
 // --- 2. GROUPS ---

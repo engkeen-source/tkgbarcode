@@ -173,6 +173,11 @@
             color: #3b82f6;
         }
 
+        .urgency-nodata {
+            background: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
+        }
+
         .ai-section {
             background: linear-gradient(145deg, rgba(139, 92, 246, 0.05) 0%, rgba(59, 130, 246, 0.03) 100%);
             border: 1px solid rgba(139, 92, 246, 0.2);
@@ -309,7 +314,7 @@
             </div>
 
             <!-- Summary Stats -->
-            <div class="stats-grid">
+            <div class="stats-grid" style="grid-template-columns: repeat(5, 1fr);">
                 <div class="stat-card" style="border-top:3px solid #ef4444;">
                     <span class="stat-title">🔴 Order Now</span>
                     <span class="stat-value" id="stat-critical">0</span>
@@ -325,6 +330,10 @@
                 <div class="stat-card" style="border-top:3px solid #3b82f6;">
                     <span class="stat-title">🔵 Overstocked</span>
                     <span class="stat-value" id="stat-overstock">0</span>
+                </div>
+                <div class="stat-card" style="border-top:3px solid #94a3b8;">
+                    <span class="stat-title">⏳ Awaiting Data</span>
+                    <span class="stat-value" id="stat-nodata">0</span>
                 </div>
             </div>
 
@@ -352,6 +361,7 @@
                     <option value="soon">🟡 Order Soon</option>
                     <option value="ok">🟢 OK</option>
                     <option value="overstock">🔵 Overstocked</option>
+                    <option value="nodata">⏳ Awaiting Data</option>
                 </select>
                 <select id="sort-filter" class="filter-input" style="max-width:200px;">
                     <option value="urgency">Sort: Urgency</option>
@@ -471,9 +481,10 @@
                 : null;
 
             let urgency;
-            if (avgDaily === 0) {
-                // No real sales data yet — don't mark as overstock, just mark as no data
-                urgency = stock > 0 ? 'ok' : 'ok';
+            if (avgDaily === 0 && stock === 0) {
+                urgency = 'nodata';       // no stock, no sales
+            } else if (avgDaily === 0 && stock > 0) {
+                urgency = 'nodata';       // has stock but no sales history yet
             } else if (daysLeft <= 14) {
                 urgency = 'critical';
             } else if (daysLeft <= BUFFER_DAYS) {
@@ -514,12 +525,13 @@
             });
 
             // Update stat cards
-            const counts = { critical: 0, soon: 0, ok: 0, overstock: 0 };
+            const counts = { critical: 0, soon: 0, ok: 0, overstock: 0, nodata: 0 };
             forecastData.forEach(r => counts[r.urgency] = (counts[r.urgency] || 0) + 1);
             document.getElementById('stat-critical').textContent = counts.critical;
             document.getElementById('stat-soon').textContent = counts.soon;
             document.getElementById('stat-ok').textContent = counts.ok;
             document.getElementById('stat-overstock').textContent = counts.overstock;
+            document.getElementById('stat-nodata').textContent = counts.nodata;
 
             if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-secondary); padding:3rem;">No products match your filter.</td></tr>`;
@@ -540,7 +552,8 @@
                     critical: { label: '🔴 Order Now', cls: 'urgency-critical' },
                     soon: { label: '🟡 Order Soon', cls: 'urgency-soon' },
                     ok: { label: '🟢 OK', cls: 'urgency-ok' },
-                    overstock: { label: '🔵 Overstocked', cls: 'urgency-overstock' }
+                    overstock: { label: '🔵 Overstocked', cls: 'urgency-overstock' },
+                    nodata: { label: '⏳ Awaiting Sales Data', cls: 'urgency-nodata' }
                 };
                 const urg = urgencyMap[row.urgency] || urgencyMap.ok;
 
