@@ -783,7 +783,7 @@ function handleSaveProduct() {
     saveMasterSystem();
     closeModal();
     renderInventory();
-    if (type !== 'single') renderRecipes();
+    if (type !== 'single' && currentSection === 'giftboxes') renderRecipes();
 }
 
 // --- SYNC ENGINE ---
