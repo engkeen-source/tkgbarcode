@@ -308,7 +308,7 @@
                         60-day buffer · All-time burn rate · Hybrid AI analysis
                     </div>
                 </div>
-                <button class="btn-ai" id="ai-analyse-btn" onclick="runAiAnalysis()">
+                <button class="btn-ai" id="ai-analyse-btn" onclick="runAiAnalysis()" disabled>
                     ✨ Run AI Analysis
                 </button>
             </div>
@@ -449,7 +449,7 @@
                 row.reference_id !== 'SYSTEM_ROLLUP'      // exclude consolidations
             );
 
-            if (outboundRows.length === 0) return 0;
+            if (outboundRows.length < 2) return 0;
 
             const totalQty = outboundRows.reduce((sum, r) => sum + (Number(r.qty) || 0), 0);
 
@@ -588,6 +588,13 @@
 
         // --- AI ANALYSIS ---
         async function runAiAnalysis() {
+            const actionable = forecastData.filter(r =>
+                r.avgDaily > 0 && (r.urgency === 'critical' || r.urgency === 'soon' || r.urgency === 'overstock')
+            );
+            if (actionable.length === 0) {
+                alert('No actionable products yet — all items are either OK or awaiting sales data.');
+                return;
+            }
             const btn = document.getElementById('ai-analyse-btn');
             const section = document.getElementById('ai-section');
             const loading = document.getElementById('ai-loading');
@@ -715,6 +722,8 @@ Be direct. No filler text. Numbers only where relevant.`;
                     window.AppDB.getLiveInventory(),
                     window.AppDB.getRawLedger()
                 ]);
+
+                document.getElementById('ai-analyse-btn').disabled = false;
 
                 liveInventory = inv || {};
                 ledger = Array.isArray(led) ? led : [];
