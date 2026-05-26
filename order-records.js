@@ -12,12 +12,18 @@ document.addEventListener('DOMContentLoaded', () => {
         liveInventory: {},
         computedStock: {},
         reportResetAt: 0,
+        refreshTimer: null,
+        refreshInFlight: false,
+        refreshQueued: false,
+        stockChannel: null,
+        pollTimer: null,
 
         async init() {
             this.cacheDom();
             this.bindEvents();
             await this.loadData();
             this.refreshAnalytics();
+            this.startRealtimeSync();
         },
 
         cacheDom() {
@@ -43,6 +49,47 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (this.dom.resetReportsBtn) {
                 this.dom.resetReportsBtn.addEventListener('click', () => this.resetReports());
+            }
+        },
+
+        startRealtimeSync() {
+            if (this.stockChannel || this.pollTimer) return;
+            if (window.AppDB && typeof window.AppDB.subscribeStockLedger === 'function') {
+                this.stockChannel = window.AppDB.subscribeStockLedger(() => this.scheduleRefresh());
+            }
+            if (!this.stockChannel) {
+                this.startPolling();
+            }
+        },
+
+        startPolling() {
+            if (this.pollTimer) return;
+            this.pollTimer = setInterval(() => this.scheduleRefresh(), 30000);
+        },
+
+        scheduleRefresh() {
+            if (this.refreshTimer) return;
+            this.refreshTimer = setTimeout(() => {
+                this.refreshTimer = null;
+                this.reloadAndRefresh();
+            }, 200);
+        },
+
+        async reloadAndRefresh() {
+            if (this.refreshInFlight) {
+                this.refreshQueued = true;
+                return;
+            }
+            this.refreshInFlight = true;
+            try {
+                await this.loadData(true);
+                this.refreshAnalytics();
+            } finally {
+                this.refreshInFlight = false;
+                if (this.refreshQueued) {
+                    this.refreshQueued = false;
+                    this.scheduleRefresh();
+                }
             }
         },
 
@@ -204,6 +251,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            Object.keys(this.computedStock).forEach((name) => {
+                if (!this.productStats[name]) {
+                    this.productStats[name] = {
+                        inbound: 0,
+                        outbound: 0,
+                        defects: 0,
+                        monthlyOutbound: {}
+                    };
+                }
+            });
+
             const initProduct = (rawName) => {
                 const name = this.canonName(rawName);
                 if (!this.productStats[name]) {
@@ -239,12 +297,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const name = initProduct(row.product_name);
                     const qty = Number(row.qty) || 0;
 
-                    if (row.transaction_type === 'INBOUND') this.productStats[name].inbound += qty;
                     if (row.transaction_type === 'OUTBOUND') this.productStats[name].outbound += qty;
                     if (row.transaction_type === 'DEFECT') this.productStats[name].defects += qty;
-                    if (row.transaction_type === 'ADJUSTMENT') {
-                        if (qty > 0) this.productStats[name].inbound += qty;
-                        else this.productStats[name].outbound += Math.abs(qty);
+                    if (row.transaction_type === 'ADJUSTMENT' && qty < 0) {
+                        this.productStats[name].outbound += Math.abs(qty);
                     }
                 });
             }
@@ -348,6 +404,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 });
             }
+
+            Object.keys(this.productStats).forEach((name) => {
+                const computed = Object.prototype.hasOwnProperty.call(this.computedStock, name)
+                    ? this.computedStock[name]
+                    : 0;
+                this.productStats[name].inbound = computed;
+            });
         },
 
         renderStats() {
@@ -359,10 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const productRows = Object.keys(this.productStats).map((name) => {
                 const stat = this.productStats[name];
-                const hasComputed = Object.prototype.hasOwnProperty.call(this.computedStock, name);
-                const dynStock = hasComputed
-                    ? this.computedStock[name]
-                    : stat.inbound - stat.outbound - stat.defects;
+                const dynStock = stat.inbound;
                 totalOutboundAll += stat.outbound;
                 totalDefectsAll += stat.defects;
                 return { name, ...stat, dynStock };

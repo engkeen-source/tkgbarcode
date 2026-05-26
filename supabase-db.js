@@ -438,6 +438,17 @@ window.AppDB = {
         return channel;
     },
 
+    subscribeStockLedger(handler) {
+        if (!supabaseClient || typeof supabaseClient.channel !== 'function') return null;
+        const channel = supabaseClient
+            .channel('stock_ledger_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_ledger' }, (payload) => {
+                if (typeof handler === 'function') handler(payload);
+            })
+            .subscribe();
+        return channel;
+    },
+
     unsubscribe(channel) {
         if (!supabaseClient || !channel) return;
         supabaseClient.removeChannel(channel);
