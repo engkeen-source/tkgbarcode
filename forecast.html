@@ -626,54 +626,54 @@
                     return `- ${name}: ${r.stock} units in stock, ${r.avgDaily.toFixed(2)} units/day avg sales, ${r.daysLeft === Infinity ? 'no recent sales' : r.daysLeft + ' days of stock remaining'}, suggested reorder: ${r.reorderQty} units (status: ${r.urgency})`;
                 }).join('\n');
 
-            const prompt = `You are a warehouse inventory analyst for TKG (The Kettle Gourmet), a snack food company in Singapore.
+            const prompt = `You are a warehouse inventory analyst for TKG (The Kettle Gourmet), a snack food company in Singapore that sells gourmet popcorn and snacks across Shopee, Lazada, TikTok, Shopify, and B2B wholesale channels.
 
-Your job is to analyse the stock data below and give a clear ordering recommendation for each product.
-
-STOCK DATA (based on all-time average daily sales, 60-day safety buffer):
+CURRENT STOCK DATA (based on 30-day rolling average daily sales, 60-day safety buffer):
 ${summaryLines}
 
-SUMMARY:
-- ${critical.length} products need ordering NOW (under 14 days of stock left)
-- ${soon.length} products need ordering SOON (under 60 days of stock left)
-- ${overstock.length} products are overstocked (over 120 days of stock)
+COUNTS:
+- ${critical.length} products status CRITICAL (under 14 days of stock left) — order immediately
+- ${soon.length} products status SOON (under 60 days of stock left) — order this week
+- ${overstock.length} products status OVERSTOCK (over 120 days of stock) — pause ordering
 
-YOUR TASK:
-For each product listed above, state exactly:
-1. How much stock to order (in units)
-2. When to place the order by
-3. Why (one short sentence based on burn rate)
+INSTRUCTIONS:
+You must follow the output format below exactly. Do not add any introduction, explanation, or closing remarks. Do not say "Sure!" or "Here is my analysis". Start your response directly with ## ORDERING RECOMMENDATIONS.
 
-Then after the product list, provide:
-- Top 3 immediate actions to take today
-- Any overstock products to pause ordering on
-- One overall ordering strategy recommendation
+For each product in the stock data above, provide a recommendation block. Do not skip any product.
 
-FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+For reorder quantities: if the suggested reorder qty is already provided, use it. Round to the nearest sensible carton size (multiples of 12 or 24 for snack products).
+
+For "Order By" dates: calculate from today's date. CRITICAL = "ASAP / Today". SOON = within 7 days. Give an actual date where possible.
+
+OUTPUT FORMAT — follow this exactly, including the ## headers, ** bold product names, and --- divider:
 
 ## ORDERING RECOMMENDATIONS
 
-**[Product Name]**
+**[Product Name]** — [CRITICAL / SOON / OVERSTOCK]
 - Order: [X units]
-- Order By: [Date or ASAP]
-- Reason: [one sentence]
+- Order By: [date or ASAP]
+- Reason: [one sentence, mention burn rate or days remaining]
 
-(repeat for each product)
+(repeat block for every product)
 
 ---
 
 ## IMMEDIATE ACTIONS
-1. [action]
-2. [action]
-3. [action]
+1. [most urgent action]
+2. [second action]
+3. [third action]
 
 ## PAUSE ORDERING
-- [product] — overstocked until approx [date]
+- [product name] — overstocked, approx [X] days of stock remaining
 
-## STRATEGY RECOMMENDATION
-[2-3 sentences max]
+## STRATEGY NOTE
+[2-3 sentences max. Focus on the overall stock health and one practical suggestion for TKG.]
 
-Be direct. No filler text. Numbers only where relevant.`;
+RULES:
+- No filler text, no greetings, no sign-off
+- Numbers only where relevant
+- If a product has no recent sales data, say "low velocity — monitor before reordering"
+- Do not invent data that was not provided`;
 
             try {
                 // Use a CORS proxy or backend relay
