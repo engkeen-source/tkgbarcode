@@ -305,10 +305,10 @@
                 <div>
                     <h1>📦 Stock Forecast</h1>
                     <div style="color:var(--text-secondary); margin-top:0.4rem;">
-                        60-day buffer · All-time burn rate · Hybrid AI analysis
+                        60-day buffer · 30-day rolling burn rate · Hybrid AI analysis
                     </div>
                 </div>
-                <button class="btn-ai" id="ai-analyse-btn" onclick="runAiAnalysis()" disabled>
+                <button class="btn-ai" id="ai-analyse-btn" onclick="runAiAnalysis()">
                     ✨ Run AI Analysis
                 </button>
             </div>
@@ -416,7 +416,12 @@
             let neg = 0;
             (rawBatches || []).forEach(b => {
                 if (b.qty > 0) pos.push({ expiry: b.expiry, qty: b.qty });
-                else if (b.qty < 0) neg += Math.abs(b.qty);
+                else if (b.qty < 0) {
+                    // Only FIFO-sweep expiry-less negatives. Expiry-specific negatives
+                    // are already baked into the per-batch qty by getLiveInventory()
+                    // and must NOT be swept again to avoid double-deduction.
+                    if (!b.expiry) neg += Math.abs(b.qty);
+                }
             });
             pos.sort((a, b) => {
                 if (!a.expiry && !b.expiry) return 0;
@@ -440,31 +445,46 @@
 
         function getAvgDailySales(productName) {
             // Only count REAL order fulfillments — exclude manual adjustments and batch clears
-            const outboundRows = ledger.filter(row =>
+            const allOutboundRows = ledger.filter(row =>
                 row.transaction_type === 'OUTBOUND' &&
                 row.product_name &&
                 row.product_name.toLowerCase() === productName.toLowerCase() &&
-                row.reference_id !== 'MANUAL_ADJUST' &&  // exclude manual edits
-                row.reference_id !== 'DEFECT_LOG' &&      // exclude defects
-                row.reference_id !== 'SYSTEM_ROLLUP'      // exclude consolidations
+                row.reference_id !== 'MANUAL_ADJUST' &&
+                row.reference_id !== 'DEFECT_LOG' &&
+                row.reference_id !== 'SYSTEM_ROLLUP'
             );
 
-            if (outboundRows.length < 2) return 0;
+            if (allOutboundRows.length === 0) return 0;
 
-            const totalQty = outboundRows.reduce((sum, r) => sum + (Number(r.qty) || 0), 0);
+            // Use a rolling 30-day window so recent velocity changes are captured quickly.
+            // "All-time average" massively underestimates products that recently picked up
+            // because months of zero-sales drag the denominator up.
+            const ROLLING_DAYS = 30;
+            const windowStart = new Date(Date.now() - ROLLING_DAYS * 24 * 60 * 60 * 1000);
 
-            // Use days since first order to today for a realistic average
-            const dates = outboundRows
-                .map(r => new Date(r.created_at || r.date))
-                .filter(d => !isNaN(d));
+            const recentRows = allOutboundRows.filter(r => {
+                const d = new Date(r.created_at || r.date);
+                return !isNaN(d) && d >= windowStart;
+            });
 
-            if (dates.length === 0) return 0;
+            // If no sales in last 30 days, fall back to 90-day window so slow movers
+            // don't disappear from forecasts entirely.
+            let rowsToUse = recentRows;
+            let spanDays = ROLLING_DAYS;
 
-            const earliest = new Date(Math.min(...dates));
-            const today = new Date();
-            const daySpan = Math.max(1, Math.ceil((today - earliest) / (1000 * 60 * 60 * 24)));
+            if (recentRows.length === 0) {
+                const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+                const olderRows = allOutboundRows.filter(r => {
+                    const d = new Date(r.created_at || r.date);
+                    return !isNaN(d) && d >= ninetyDaysAgo;
+                });
+                if (olderRows.length === 0) return 0; // dormant product
+                rowsToUse = olderRows;
+                spanDays = 90;
+            }
 
-            return totalQty / daySpan;
+            const totalQty = rowsToUse.reduce((sum, r) => sum + (Number(r.qty) || 0), 0);
+            return totalQty / spanDays;
         }
 
         function computeForecast(productName) {
@@ -586,13 +606,59 @@
             }).join('');
         }
 
+        // --- AI RATE LIMITING ---
+        const AI_COOLDOWN_MINUTES = 5;   // minimum minutes between runs
+        const AI_DAILY_CAP = 5;          // max runs per calendar day
+
+        function checkAiRateLimit() {
+            const now = Date.now();
+            const todayKey = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+            // Load stored state
+            const stored = JSON.parse(localStorage.getItem('tkg_ai_usage') || '{}');
+
+            // Check cooldown
+            const lastRun = stored.lastRun || 0;
+            const minutesSinceLast = (now - lastRun) / 1000 / 60;
+            if (minutesSinceLast < AI_COOLDOWN_MINUTES) {
+                const remaining = Math.ceil(AI_COOLDOWN_MINUTES - minutesSinceLast);
+                return { allowed: false, reason: `⏳ Please wait ${remaining} more minute${remaining !== 1 ? 's' : ''} before running another analysis.` };
+            }
+
+            // Check daily cap
+            const todayCount = (stored.date === todayKey) ? (stored.count || 0) : 0;
+            if (todayCount >= AI_DAILY_CAP) {
+                return { allowed: false, reason: `🚫 Daily limit of ${AI_DAILY_CAP} AI analyses reached. Resets at midnight.` };
+            }
+
+            return { allowed: true, todayKey, todayCount };
+        }
+
+        function recordAiUsage(todayKey, todayCount) {
+            localStorage.setItem('tkg_ai_usage', JSON.stringify({
+                lastRun: Date.now(),
+                date: todayKey,
+                count: todayCount + 1
+            }));
+            updateAiButtonLabel();
+        }
+
+        function updateAiButtonLabel() {
+            const btn = document.getElementById('ai-analyse-btn');
+            if (!btn) return;
+            const stored = JSON.parse(localStorage.getItem('tkg_ai_usage') || '{}');
+            const todayKey = new Date().toISOString().slice(0, 10);
+            const todayCount = (stored.date === todayKey) ? (stored.count || 0) : 0;
+            const remaining = AI_DAILY_CAP - todayCount;
+            btn.title = `${remaining} of ${AI_DAILY_CAP} daily analyses remaining`;
+        }
+
         // --- AI ANALYSIS ---
         async function runAiAnalysis() {
-            const actionable = forecastData.filter(r =>
-                r.avgDaily > 0 && (r.urgency === 'critical' || r.urgency === 'soon' || r.urgency === 'overstock')
-            );
-            if (actionable.length === 0) {
-                alert('No actionable products yet — all items are either OK or awaiting sales data.');
+            // Check rate limit before doing anything
+            const limitCheck = checkAiRateLimit();
+            if (!limitCheck.allowed) {
+                alert(limitCheck.reason);
                 return;
             }
             const btn = document.getElementById('ai-analyse-btn');
@@ -695,6 +761,9 @@ RULES:
                 const data = await res.json();
                 const text = data.text || 'No response received.';
 
+                // Record successful usage for rate limiting
+                recordAiUsage(limitCheck.todayKey, limitCheck.todayCount);
+
                 loading.style.display = 'none';
                 response.style.display = 'block';
                 response.innerHTML = text
@@ -723,8 +792,6 @@ RULES:
                     window.AppDB.getRawLedger()
                 ]);
 
-                document.getElementById('ai-analyse-btn').disabled = false;
-
                 liveInventory = inv || {};
                 ledger = Array.isArray(led) ? led : [];
 
@@ -745,6 +812,10 @@ RULES:
                 }
 
                 renderTable();
+
+                // Enable AI button and show remaining daily usage in tooltip
+                document.getElementById('ai-analyse-btn').disabled = false;
+                updateAiButtonLabel();
 
                 // Bind filters
                 document.getElementById('forecast-search').addEventListener('input', renderTable);

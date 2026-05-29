@@ -138,6 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (row.transaction_type === 'INBOUND')  this.productStats[name].inbound  += qty;
                     if (row.transaction_type === 'OUTBOUND') this.productStats[name].outbound += qty;
                     if (row.transaction_type === 'DEFECT')   this.productStats[name].defects  += qty;
+                    // RETURN = restocked item coming back into stock — counts as inbound
+                    if (row.transaction_type === 'RETURN')   this.productStats[name].inbound  += qty;
                     if (row.transaction_type === 'ADJUSTMENT') {
                         if (qty > 0) this.productStats[name].inbound  += qty;
                         else         this.productStats[name].outbound += Math.abs(qty);

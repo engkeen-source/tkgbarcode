@@ -132,7 +132,8 @@ window.AppDB = {
         data.forEach(row => {
             const product = canon(row.product_name);
             const expiry = row.expiry || '';
-            const isDeduction = row.transaction_type === 'OUTBOUND' || row.transaction_type === 'DEFECT';
+            // OUTBOUND and DEFECT reduce stock; INBOUND, ADJUSTMENT, and RETURN all add to stock.
+            const isDeduction = ['OUTBOUND', 'DEFECT'].includes(row.transaction_type);
             const qty = isDeduction ? -row.qty : row.qty;
 
             if (!inventory[product]) inventory[product] = [];
@@ -250,20 +251,18 @@ window.AppDB = {
         let forwardRows = [];
         for (const [productName, batches] of Object.entries(rawInventory)) {
             batches.forEach(b => {
-                if (b.qty > 0 || b.qty < 0) { // Keep any non-zero balances
+                // Only roll up positive balances. Products with a net negative balance
+                // (over-sold items) are skipped — they will self-correct once new inbound
+                // stock arrives, and we don't want to permanently bake in phantom debt.
+                if (b.qty > 0) {
                     forwardRows.push({
                         product_name: canon(productName),
-                        transaction_type: 'INBOUND', // INBOUND acts as positive quantity.
-                        qty: Math.abs(b.qty), // Absolute value, we can use OUTBOUND for negative 
+                        transaction_type: 'INBOUND',
+                        qty: b.qty,
                         expiry: b.expiry || null,
                         reference_id: 'SYSTEM_ROLLUP',
                         notes: 'Ledger Consolidation / Roll-up starting balance'
                     });
-
-                    // If the balance is actually negative, flip type
-                    if (b.qty < 0) {
-                        forwardRows[forwardRows.length - 1].transaction_type = 'OUTBOUND';
-                    }
                 }
             });
         }
@@ -316,12 +315,6 @@ window.AppDB = {
             order_data: orderData
         }).eq('id', orderId);
         if (updErr) throw updErr;
-    },
-
-    async getOrders() {
-        const { data, error } = await supabaseClient.from('orders').select('order_data');
-        if (error) throw error;
-        return data.map(d => d.order_data);
     },
 
     /**
@@ -432,17 +425,6 @@ window.AppDB = {
         const channel = supabaseClient
             .channel('orders_changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-                if (typeof handler === 'function') handler(payload);
-            })
-            .subscribe();
-        return channel;
-    },
-
-    subscribeStockLedger(handler) {
-        if (!supabaseClient || typeof supabaseClient.channel !== 'function') return null;
-        const channel = supabaseClient
-            .channel('stock_ledger_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_ledger' }, (payload) => {
                 if (typeof handler === 'function') handler(payload);
             })
             .subscribe();
@@ -681,7 +663,8 @@ window.AppDB = {
 
         let total = 0;
         (data || []).forEach(row => {
-            const isDeduction = row.transaction_type === 'OUTBOUND' || row.transaction_type === 'DEFECT';
+            // OUTBOUND and DEFECT reduce stock; INBOUND, ADJUSTMENT, and RETURN all add to stock.
+            const isDeduction = ['OUTBOUND', 'DEFECT'].includes(row.transaction_type);
             total += isDeduction ? -row.qty : row.qty;
         });
         return total;

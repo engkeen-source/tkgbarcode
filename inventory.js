@@ -294,11 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         saveInventory() {
-            localStorage.setItem('tkg_inventory', JSON.stringify(this.inventory));
-            // Show a temporary success state on the save button
+            // Data is already live in Supabase — no localStorage write needed.
+            // This function now exists solely for the button's visual feedback.
             const saveBtn = document.getElementById('save-inventory-btn');
             const originalText = saveBtn.textContent;
-            saveBtn.textContent = 'Saved!';
+            saveBtn.textContent = 'Synced!';
             saveBtn.style.background = '#059669';
             setTimeout(() => {
                 saveBtn.textContent = originalText;
@@ -347,8 +347,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (b.qty > 0) {
                     positiveBatches.push({ expiry: b.expiry, qty: b.qty });
                 } else if (b.qty < 0) {
-                    // Accumulate all FIFO outbound/defect generic sweeps
-                    negativeOffset += Math.abs(b.qty);
+                    // Only FIFO-sweep deductions that have NO expiry recorded.
+                    // Expiry-specific negatives are already baked into the per-batch qty
+                    // by getLiveInventory() and must NOT be swept again — doing so would
+                    // cause a double-deduction on the earliest expiry batch.
+                    if (!b.expiry) {
+                        negativeOffset += Math.abs(b.qty);
+                    }
                 }
             });
 
@@ -559,10 +564,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (isPlus) {
                             await AppDB.insertAdjustment(this.currentModalProduct, 1, expiry, "Manual +1 Edit");
                         } else {
-                            // verify they have stock to deduct
-                            const qtyInput = row ? row.querySelector('.stock-input') : target.parentElement.querySelector('.stock-input');
-                            const qty = parseInt(qtyInput && qtyInput.value, 10) || 0;
-                            if (qty > 0) {
+                            // Read the live batch qty from in-memory inventory data,
+                            // NOT from the DOM input — the DOM may be stale if another
+                            // tab or user has made changes since the modal was opened.
+                            const liveBatches = this.inventory[this.currentModalProduct] || [];
+                            const liveBatch = liveBatches.find(b => (b.expiry || '') === (expiry || ''));
+                            const liveQty = liveBatch ? liveBatch.qty : 0;
+                            if (liveQty > 0) {
                                 await AppDB.insertAdjustment(this.currentModalProduct, -1, expiry, "Manual -1 Edit");
                             }
                         }
