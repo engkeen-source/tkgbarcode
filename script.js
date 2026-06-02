@@ -358,31 +358,80 @@ const app = {
         this.processFile(files[0]);
     },
 
-    processFile(file) {
+    readFileAs(file, mode) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
+
+            if (mode === 'text') {
+                reader.readAsText(file);
+            } else if (mode === 'binary') {
+                reader.readAsBinaryString(file);
+            } else {
+                reader.readAsArrayBuffer(file);
+            }
+        });
+    },
+
+    async processFile(file) {
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        if (typeof XLSX === 'undefined') {
+            alert('Excel parser failed to load. Please refresh the page and try again.');
+            return;
+        }
+
+        const fileName = String(file.name || '').toLowerCase();
+        const isCsv = fileName.endsWith('.csv');
+
+        const attempts = isCsv
+            ? [
+                { mode: 'text', type: 'string' },
+                { mode: 'array', type: 'array' },
+                { mode: 'binary', type: 'binary' }
+            ]
+            : [
+                { mode: 'array', type: 'array' },
+                { mode: 'binary', type: 'binary' },
+                { mode: 'text', type: 'string' }
+            ];
+
+        let workbook = null;
+        let lastErr = null;
+
+        for (const attempt of attempts) {
             try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-                if (jsonData.length === 0) {
-                    alert('No data found in the file.');
-                    return;
+                const data = await this.readFileAs(file, attempt.mode);
+                workbook = XLSX.read(data, { type: attempt.type });
+                if (workbook && workbook.SheetNames && workbook.SheetNames.length > 0) {
+                    break;
                 }
-
-                // Pass workbook to allow re-parsing if needed (for Lazada column logic)
-                this.processOrders(jsonData, worksheet);
             } catch (err) {
-                alert('Error parsing Excel file. Please ensure it is a valid .xlsx or .xls file.');
-                console.error(err);
+                lastErr = err;
             }
-        };
-        reader.readAsArrayBuffer(file);
+        }
+
+        if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+            alert('Error parsing Excel file. Please ensure it is a valid .xlsx, .xls, or .csv file.');
+            console.error(lastErr || 'Unable to parse workbook.');
+            return;
+        }
+
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        if (!worksheet) {
+            alert('No worksheet found in the file.');
+            return;
+        }
+
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+        if (jsonData.length === 0) {
+            alert('No data found in the file.');
+            return;
+        }
+
+        this.processOrders(jsonData, worksheet);
     },
 
     processOrders(data, worksheet) {
@@ -398,6 +447,13 @@ const app = {
         }
 
         if (parsedOrders.length === 0) return;
+
+        const normalizedPlatform = this.normalizeText(platform);
+        parsedOrders.forEach(order => {
+            if (!order) return;
+            const existing = this.normalizeText(order.platform);
+            order.platform = existing || normalizedPlatform || order.platform;
+        });
 
         // Merging Logic
         const ordersMap = new Map();
@@ -678,8 +734,9 @@ const app = {
             // Usually inferred from AWB prefix or explicit column if exists?
             // Existing logic relies on AWB prefix in dashboard render.
             // We can store a generic shipper if columns exist (like "Shipping Option")
-            const shipKey = keys.find(k => /shipping.*option|carrier/i.test(k));
-            const shipper = shipKey ? row[shipKey] : 'Other'; // Placeholder
+            const shipKey = keys.find(k => /shipping\s*option|shipping\s*method|carrier|courier|logistics|delivery|shipper/i.test(k));
+            const shipperRaw = shipKey ? row[shipKey] : '';
+            const shipper = shipperRaw || 'Other'; // Placeholder
 
             if (!ordersMap.has(id)) {
                 ordersMap.set(id, {
@@ -949,14 +1006,65 @@ const app = {
         return rawName;
     },
 
+    normalizeText(value) {
+        return String(value || '').trim().toLowerCase();
+    },
+
+    isCompleteStatus(status) {
+        const normalized = this.normalizeText(status);
+        return normalized === 'complete' || normalized === 'exported';
+    },
+
+    derivePlatform(order) {
+        const platform = this.normalizeText(order && order.platform);
+        if (platform) return platform;
+
+        const shipper = this.normalizeText(order && order.shipper);
+        const idToken = this.normalizeText(order && (order.awb || order.orderId || order.id));
+
+        if (shipper.includes('shopify') || idToken.startsWith('shop-')) return 'shopify';
+        if (shipper.includes('lazada') || shipper.includes('lex') || idToken.startsWith('lz')) return 'lazada';
+        if (shipper.includes('tiktok') || idToken.startsWith('tt')) return 'tiktok';
+        if (shipper.includes('shopee') || shipper.includes('spx') || shipper.includes('ninja')) return 'shopee';
+
+        return '';
+    },
+
+    getOrderBucket(order) {
+        const platform = this.derivePlatform(order);
+        if (platform === 'shopify') return 'shopify';
+        if (platform === 'lazada') return 'lazada';
+
+        const shipper = this.normalizeText(order && order.shipper);
+        const idToken = this.normalizeText(order && (order.awb || order.orderId || order.id));
+
+        if (shipper.includes('ninja') || idToken.startsWith('shhpm') || idToken.startsWith('shpm') || idToken.startsWith('ninja')) {
+            return 'ninjavan';
+        }
+
+        if (shipper.includes('spx') || shipper.includes('pick locker') || idToken.startsWith('spx')) {
+            return 'spx';
+        }
+
+        if (shipper.includes('speedpost') || shipper.includes('singpost')) {
+            if (idToken.startsWith('lz')) return 'lazada';
+        }
+
+        return 'other';
+    },
+
     renderDashboard() {
-        const renderableOrders = this.state.orders.filter(o => {
+        const allOrders = this.state.orders.filter(o => {
             const idStr = String(o.id || '');
             const platformStr = String(o.platform || '');
             return !idStr.startsWith('B2B-') && !idStr.startsWith('b2b-') && platformStr !== 'b2b';
         });
 
-        this.dom.orderCount.textContent = renderableOrders.length;
+        const activeOrders = allOrders.filter(order => !this.isCompleteStatus(order.status));
+
+        if (this.dom.orderCount) {
+            this.dom.orderCount.textContent = activeOrders.length;
+        }
         this.dom.ordersTableBody.innerHTML = '';
 
         // Render Issues Panel
@@ -973,53 +1081,38 @@ const app = {
 
         // Tally Counters
         let stats = {
-            ninja: { total: 0, done: 0 },
+            ninjavan: { total: 0, done: 0 },
             spx: { total: 0, done: 0 },
-            speedpost: { total: 0, done: 0 },
+            lazada: { total: 0, done: 0 },
             shopify: { total: 0, done: 0 },
             other: { total: 0, done: 0 },
             total: { total: 0, done: 0 }
         };
 
-        renderableOrders.forEach(order => {
-            if (!order || !order.lineItems) return; // Defensive check
+        allOrders.forEach(order => {
+            if (!order) return;
 
-            const isComplete = order.status === 'Complete' || order.status === 'Exported';
-            const idToCheck = String(order.awb || order.orderId || "").toUpperCase();
-
-            // Global Total
+            const isComplete = this.isCompleteStatus(order.status);
             stats.total.total++;
             if (isComplete) stats.total.done++;
 
-            // Carrier Detection & Stats
-            let carrier = 'other';
-            if (order.shipper === 'Shopify' || idToCheck.startsWith('SHOP-')) {
-                carrier = 'shopify';
-            } else if (idToCheck.startsWith('SHHPM') || idToCheck.startsWith('SHPM')) {
-                carrier = 'ninja';
-            } else if (idToCheck.startsWith('SPX')) {
-                carrier = 'spx';
-            } else if (order.shipper === 'SpeedPost' || idToCheck.startsWith('SPEED') || idToCheck.startsWith('LZSGD')) {
-                carrier = 'speedpost';
-            }
+            const bucket = this.getOrderBucket(order);
+            const key = stats[bucket] ? bucket : 'other';
+            stats[key].total++;
+            if (isComplete) stats[key].done++;
+        });
 
-            // Update Stats
-            if (stats[carrier]) {
-                stats[carrier].total++;
-                if (isComplete) stats[carrier].done++;
-            } else {
-                stats.other.total++;
-                if (isComplete) stats.other.done++;
-            }
+        activeOrders.forEach(order => {
+            const lineItems = Array.isArray(order.lineItems) ? order.lineItems : [];
+            const bucket = this.getOrderBucket(order);
 
-            // ... Render Table Rows ...
             const tr = document.createElement('tr');
             if (order.isDuplicate) {
                 tr.classList.add('row-duplicate');
-            } else if (carrier === 'shopify') {
+            } else if (bucket === 'shopify') {
                 tr.style.borderLeft = "4px solid #9333ea";
                 tr.style.background = "rgba(147, 51, 234, 0.05)";
-            } else if (carrier === 'other') {
+            } else if (bucket === 'other') {
                 tr.classList.add('row-alert');
             }
 
@@ -1027,7 +1120,7 @@ const app = {
             let totalItems = 0;
             let hasMissingBarcodes = false;
 
-            order.lineItems.forEach(line => {
+            lineItems.forEach(line => {
                 if (line.subItems) {
                     line.subItems.forEach(sub => {
                         totalItems += (sub.requiredQty || 0);
@@ -1054,7 +1147,7 @@ const app = {
             tr.innerHTML = `
                 <td><strong>${order.awb || order.orderId || "?"}</strong>${cautionIcon}</td>
                 <td>${order.orderId || "-"}</td>
-                <td>${totalItems} items (${order.lineItems.length} lines)</td>
+                <td>${totalItems} items (${lineItems.length} lines)</td>
                 <td>
                     <span class="${statusClass}">${order.status}</span>
                 </td>
@@ -1065,32 +1158,37 @@ const app = {
         });
 
         // Update Stats DOM
-        if (document.getElementById('count-ninja')) {
-            document.getElementById('count-ninja').textContent = `${stats.ninja.done} / ${stats.ninja.total}`;
-            document.getElementById('count-spx').textContent = `${stats.spx.done} / ${stats.spx.total}`;
-            if (document.getElementById('count-shopify')) {
-                document.getElementById('count-shopify').textContent = `${stats.shopify.done} / ${stats.shopify.total}`;
-            }
-            document.getElementById('count-other').textContent = `${stats.other.done} / ${stats.other.total}`;
-            document.getElementById('count-total').textContent = `${stats.total.done} / ${stats.total.total}`;
+        const ninjaEl = document.getElementById('count-ninja');
+        if (ninjaEl) ninjaEl.textContent = `${stats.ninjavan.done} / ${stats.ninjavan.total}`;
 
-            // SpeedPost Logic
-            let spCard = document.getElementById('stat-card-speedpost');
-            if (stats.speedpost && stats.speedpost.total > 0) {
-                if (!spCard) {
-                    const panel = document.getElementById('stats-panel');
-                    spCard = document.createElement('div');
-                    spCard.className = 'stat-card';
-                    spCard.id = 'stat-card-speedpost';
-                    spCard.innerHTML = `<div class="stat-title">SpeedPost</div><div class="stat-value" id="count-speedpost">0</div>`;
-                    panel.insertBefore(spCard, panel.lastElementChild); // Insert before Total
-                }
-                const countElem = document.getElementById('count-speedpost');
-                if (countElem) countElem.textContent = `${stats.speedpost.done} / ${stats.speedpost.total}`;
-                spCard.style.display = 'flex';
-            } else if (spCard) {
-                spCard.style.display = 'none';
+        const spxEl = document.getElementById('count-spx');
+        if (spxEl) spxEl.textContent = `${stats.spx.done} / ${stats.spx.total}`;
+
+        const lazadaEl = document.getElementById('count-lazada');
+        if (lazadaEl) lazadaEl.textContent = `${stats.lazada.done} / ${stats.lazada.total}`;
+
+        const shopifyEl = document.getElementById('count-shopify');
+        if (shopifyEl) shopifyEl.textContent = `${stats.shopify.done} / ${stats.shopify.total}`;
+
+        const totalEl = document.getElementById('count-total');
+        if (totalEl) totalEl.textContent = `${stats.total.done} / ${stats.total.total}`;
+
+        // Optional Other card
+        let otherCard = document.getElementById('stat-card-other');
+        if (stats.other.total > 0) {
+            if (!otherCard) {
+                const panel = document.getElementById('stats-panel');
+                otherCard = document.createElement('div');
+                otherCard.className = 'stat-card stat-alert';
+                otherCard.id = 'stat-card-other';
+                otherCard.innerHTML = `<div class="stat-title">Other</div><div class="stat-value" id="count-other">0</div>`;
+                panel.insertBefore(otherCard, panel.lastElementChild); // Insert before Total
             }
+            const countOtherEl = document.getElementById('count-other');
+            if (countOtherEl) countOtherEl.textContent = `${stats.other.done} / ${stats.other.total}`;
+            otherCard.style.display = 'flex';
+        } else if (otherCard) {
+            otherCard.style.display = 'none';
         }
     },
 
@@ -2203,6 +2301,7 @@ const app = {
             awb: awb,
             orderId: orderId,
             status: 'Pending',
+            platform: 'shopify',
             shipper: 'Shopify',
             lineItems: []
         };
