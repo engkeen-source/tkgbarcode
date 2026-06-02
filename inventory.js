@@ -247,8 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const computedBatches = this.getComputedBatches(productName);
             const stock = computedBatches.reduce((sum, b) => sum + b.computedQty, 0);
-            const isLow = stock < 10;
-
+            const isLow = stock < window.InventoryMath.LOW_STOCK_THRESHOLD;
             // Update low-stock card styling
             card.classList.toggle('low-stock', isLow);
 
@@ -415,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const computedBatches = this.getComputedBatches(productName);
 
                     const stock = computedBatches.reduce((sum, b) => sum + b.computedQty, 0);
-                    const isLow = stock < 10; // Threshold for low stock
+                    const isLow = stock < window.InventoryMath.LOW_STOCK_THRESHOLD; // Threshold for low stock
 
                     const card = document.createElement('div');
                     card.className = `inventory-card ${isLow ? 'low-stock' : ''}`;

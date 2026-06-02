@@ -135,14 +135,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     const name = initProduct(row.product_name);
                     const qty = Number(row.qty) || 0;
 
-                    if (row.transaction_type === 'INBOUND')  this.productStats[name].inbound  += qty;
+                    if (row.transaction_type === 'INBOUND') this.productStats[name].inbound += qty;
                     if (row.transaction_type === 'OUTBOUND') this.productStats[name].outbound += qty;
-                    if (row.transaction_type === 'DEFECT')   this.productStats[name].defects  += qty;
+                    if (row.transaction_type === 'DEFECT') this.productStats[name].defects += qty;
                     // RETURN = restocked item coming back into stock — counts as inbound
-                    if (row.transaction_type === 'RETURN')   this.productStats[name].inbound  += qty;
+                    if (row.transaction_type === 'RETURN') this.productStats[name].inbound += qty;
                     if (row.transaction_type === 'ADJUSTMENT') {
-                        if (qty > 0) this.productStats[name].inbound  += qty;
-                        else         this.productStats[name].outbound += Math.abs(qty);
+                        if (qty > 0) this.productStats[name].inbound += qty;
+                        else this.productStats[name].outbound += Math.abs(qty);
                     }
                 });
             }
@@ -155,30 +155,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (row.reference_id && cancelledOrderIds.has(String(row.reference_id))) return;
 
                     const name = initProduct(row.product_name);
-                    const qty  = Number(row.qty) || 0;
+                    const qty = Number(row.qty) || 0;
 
                     // Parse the ledger row date
                     let d = null;
                     if (row.created_at) d = new Date(row.created_at);
-                    else if (row.date)  d = new Date(row.date);
+                    else if (row.date) d = new Date(row.date);
 
                     if (!d || isNaN(d.getTime())) return;
 
                     const monthKey = d.toLocaleString('default', { month: 'short', year: 'numeric' });
-                    const weekKey  = (() => {
+                    const weekKey = (() => {
                         const wd = new Date(d);
                         const day = wd.getDay() || 7;
                         wd.setDate(wd.getDate() - (day - 1));
-                        return `${wd.getFullYear()}-${String(wd.getMonth()+1).padStart(2,'0')}-${String(wd.getDate()).padStart(2,'0')}`;
+                        return `${wd.getFullYear()}-${String(wd.getMonth() + 1).padStart(2, '0')}-${String(wd.getDate()).padStart(2, '0')}`;
                     })();
-                    const dayKey   = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-                    const yearKey  = `${d.getFullYear()}`;
+                    const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    const yearKey = `${d.getFullYear()}`;
 
                     const mo = this.productStats[name].monthlyOutbound;
-                    mo[`daily::${dayKey}`]     = (mo[`daily::${dayKey}`]     || 0) + qty;
-                    mo[`weekly::${weekKey}`]   = (mo[`weekly::${weekKey}`]   || 0) + qty;
+                    mo[`daily::${dayKey}`] = (mo[`daily::${dayKey}`] || 0) + qty;
+                    mo[`weekly::${weekKey}`] = (mo[`weekly::${weekKey}`] || 0) + qty;
                     mo[`monthly::${monthKey}`] = (mo[`monthly::${monthKey}`] || 0) + qty;
-                    mo[`yearly::${yearKey}`]   = (mo[`yearly::${yearKey}`]   || 0) + qty;
+                    mo[`yearly::${yearKey}`] = (mo[`yearly::${yearKey}`] || 0) + qty;
                 });
             }
 
@@ -195,13 +195,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!d) return; // skip orders with no parseable date
 
                     const monthKey = d.toLocaleString('default', { month: 'short', year: 'numeric' });
-                    const weekKey  = (() => {
+                    const weekKey = (() => {
                         const wd = new Date(d);
                         const day = wd.getDay() || 7;
                         wd.setDate(wd.getDate() - (day - 1));
-                        return `${wd.getFullYear()}-${String(wd.getMonth()+1).padStart(2,'0')}-${String(wd.getDate()).padStart(2,'0')}`;
+                        return `${wd.getFullYear()}-${String(wd.getMonth() + 1).padStart(2, '0')}-${String(wd.getDate()).padStart(2, '0')}`;
                     })();
-                    const dayKey  = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                    const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                     const yearKey = `${d.getFullYear()}`;
 
                     if (!Array.isArray(order.lineItems)) return;
@@ -225,29 +225,29 @@ document.addEventListener('DOMContentLoaded', () => {
                                         const sName = initProduct(sNameRaw);
                                         const smo = this.productStats[sName].monthlyOutbound;
                                         const addIfMissing = (key, val) => { if (!smo[key]) smo[key] = val; else smo[key] += val; };
-                                        addIfMissing(`daily::${dayKey}`,     Number(sCount) || 0);
-                                        addIfMissing(`weekly::${weekKey}`,   Number(sCount) || 0);
+                                        addIfMissing(`daily::${dayKey}`, Number(sCount) || 0);
+                                        addIfMissing(`weekly::${weekKey}`, Number(sCount) || 0);
                                         addIfMissing(`monthly::${monthKey}`, Number(sCount) || 0);
-                                        addIfMissing(`yearly::${yearKey}`,   Number(sCount) || 0);
+                                        addIfMissing(`yearly::${yearKey}`, Number(sCount) || 0);
                                     }
                                 } else {
                                     const addIfMissing = (key, val) => { if (!mo[key]) mo[key] = val; else mo[key] += val; };
-                                    addIfMissing(`daily::${dayKey}`,     qty);
-                                    addIfMissing(`weekly::${weekKey}`,   qty);
+                                    addIfMissing(`daily::${dayKey}`, qty);
+                                    addIfMissing(`weekly::${weekKey}`, qty);
                                     addIfMissing(`monthly::${monthKey}`, qty);
-                                    addIfMissing(`yearly::${yearKey}`,   qty);
+                                    addIfMissing(`yearly::${yearKey}`, qty);
                                 }
                             });
                         } else {
                             const name = initProduct(line.name);
-                            const mo   = this.productStats[name].monthlyOutbound;
-                            const qty  = Number(line.orderedQty) || 0;
+                            const mo = this.productStats[name].monthlyOutbound;
+                            const qty = Number(line.orderedQty) || 0;
                             if (qty <= 0) return;
                             const addIfMissing = (key, val) => { if (!mo[key]) mo[key] = val; else mo[key] += val; };
-                            addIfMissing(`daily::${dayKey}`,     qty);
-                            addIfMissing(`weekly::${weekKey}`,   qty);
+                            addIfMissing(`daily::${dayKey}`, qty);
+                            addIfMissing(`weekly::${weekKey}`, qty);
                             addIfMissing(`monthly::${monthKey}`, qty);
-                            addIfMissing(`yearly::${yearKey}`,   qty);
+                            addIfMissing(`yearly::${yearKey}`, qty);
                         }
                     });
                 });
@@ -260,13 +260,13 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.innerHTML = '';
 
             let totalOutboundAll = 0;
-            let totalDefectsAll  = 0;
+            let totalDefectsAll = 0;
 
             const productRows = Object.keys(this.productStats).map(name => {
                 const stat = this.productStats[name];
                 const dynStock = stat.inbound - stat.outbound - stat.defects;
                 totalOutboundAll += stat.outbound;
-                totalDefectsAll  += stat.defects;
+                totalDefectsAll += stat.defects;
                 return { name, ...stat, dynStock };
             });
 
@@ -274,10 +274,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             productRows.forEach(row => {
                 const tr = document.createElement('tr');
-                const lowStockClass = row.dynStock < 10 && row.inbound > 0
+                const lowStockClass = row.dynStock < window.InventoryMath.LOW_STOCK_THRESHOLD && row.inbound > 0
                     ? 'color: var(--danger); font-weight: bold;'
                     : '';
-                const safeName  = row.name.replace(/'/g, "\\'");
+                const safeName = row.name.replace(/'/g, "\\'");
                 const linkedName = `<a onclick="window.reportsApp.selectChartProduct('${safeName}')" style="cursor:pointer;color:var(--accent);text-decoration:underline;font-weight:500;">${row.name}</a>`;
 
                 tr.innerHTML = `
@@ -291,11 +291,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const outboundEl = document.getElementById('total-outbound-stat');
-            const defectsEl  = document.getElementById('total-defects-stat');
-            const bestEl     = document.getElementById('best-seller-stat');
+            const defectsEl = document.getElementById('total-defects-stat');
+            const bestEl = document.getElementById('best-seller-stat');
 
             if (outboundEl) outboundEl.textContent = totalOutboundAll;
-            if (defectsEl)  defectsEl.textContent  = totalDefectsAll;
+            if (defectsEl) defectsEl.textContent = totalDefectsAll;
             if (bestEl && productRows.length > 0) bestEl.textContent = productRows[0].name;
         },
 
@@ -356,18 +356,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!this.chartInstance) return;
 
             const productFilter = document.getElementById('chart-product-filter').value;
-            const timeframe     = document.getElementById('chart-timeframe-filter').value;
+            const timeframe = document.getElementById('chart-timeframe-filter').value;
 
-            const overlay  = document.getElementById('chart-placeholder-overlay');
+            const overlay = document.getElementById('chart-placeholder-overlay');
             const canvasEl = document.getElementById('salesChart');
 
             if (!productFilter || productFilter === '') {
-                if (overlay)  overlay.style.display  = 'flex';
-                if (canvasEl) canvasEl.style.opacity  = '0';
+                if (overlay) overlay.style.display = 'flex';
+                if (canvasEl) canvasEl.style.opacity = '0';
                 return;
             }
-            if (overlay)  overlay.style.display  = 'none';
-            if (canvasEl) canvasEl.style.opacity  = '1';
+            if (overlay) overlay.style.display = 'none';
+            if (canvasEl) canvasEl.style.opacity = '1';
 
             // ── Pull data directly from pre-built monthlyOutbound (ledger-sourced) ──
             const prefix = `${timeframe}::`;
@@ -397,14 +397,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const dataPoints = sortedDates.map(d => salesData[d]);
-            const labels     = timeframe === 'weekly'
+            const labels = timeframe === 'weekly'
                 ? sortedDates.map(d => 'Week of ' + d)
                 : sortedDates;
 
             const pName = productFilter === 'all' ? 'All Products' : productFilter;
             this.chartInstance.data.datasets[0].label = `${pName} — Sales Vol`;
-            this.chartInstance.data.labels            = labels;
-            this.chartInstance.data.datasets[0].data  = dataPoints;
+            this.chartInstance.data.labels = labels;
+            this.chartInstance.data.datasets[0].data = dataPoints;
             this.chartInstance.update();
         }
     };

@@ -665,8 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const rawBatches = liveInventory[productName] || [];
                         const batches = this.getComputedBatches(rawBatches);
                         const total = batches.reduce((sum, b) => sum + b.qty, 0);
-
-                        if (total < 10) {
+                        if (total < window.InventoryMath.LOW_STOCK_THRESHOLD) {
                             lowItems.push({ name: productName, stock: total });
                         }
                     }
@@ -675,7 +674,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const [productName, rawBatches] of Object.entries(liveInventory)) {
                     const batches = this.getComputedBatches(rawBatches);
                     const total = batches.reduce((sum, b) => sum + b.qty, 0);
-                    if (total < 10) lowItems.push({ name: productName, stock: total });
+                    if (total < window.InventoryMath.LOW_STOCK_THRESHOLD) {
+                        lowItems.push({ name: productName, stock: total });
+                    }
                 }
             }
 
@@ -708,8 +709,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 borderRadius: 6
                             },
                             {
-                                label: 'Low Stock Threshold (10)',
-                                data: new Array(lowItems.length).fill(10),
+                                label: 'Low Stock Threshold (' + window.InventoryMath.LOW_STOCK_THRESHOLD + ')',
+                                data: new Array(lowItems.length).fill(window.InventoryMath.LOW_STOCK_THRESHOLD),
                                 type: 'line',
                                 borderColor: 'rgba(255,255,255,0.3)',
                                 borderDash: [6, 4],
