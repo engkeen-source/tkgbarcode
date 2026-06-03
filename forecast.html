@@ -418,8 +418,8 @@
                 if (b.qty > 0) pos.push({ expiry: b.expiry, qty: b.qty });
                 else if (b.qty < 0) {
                     // Only FIFO-sweep expiry-less negatives. Expiry-specific negatives
-                    // are already baked into the per-batch qty by getLiveInventory()
-                    // and must NOT be swept again to avoid double-deduction.
+                    // are already baked into per-batch qty by getLiveInventory() —
+                    // sweeping them again causes double-deduction.
                     if (!b.expiry) neg += Math.abs(b.qty);
                 }
             });
@@ -457,7 +457,7 @@
             if (allOutboundRows.length === 0) return 0;
 
             // Use a rolling 30-day window so recent velocity changes are captured quickly.
-            // "All-time average" massively underestimates products that recently picked up
+            // All-time average massively underestimates products that recently picked up
             // because months of zero-sales drag the denominator up.
             const ROLLING_DAYS = 30;
             const windowStart = new Date(Date.now() - ROLLING_DAYS * 24 * 60 * 60 * 1000);
@@ -612,25 +612,17 @@
 
         function checkAiRateLimit() {
             const now = Date.now();
-            const todayKey = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-
-            // Load stored state
+            const todayKey = new Date().toISOString().slice(0, 10);
             const stored = JSON.parse(localStorage.getItem('tkg_ai_usage') || '{}');
-
-            // Check cooldown
-            const lastRun = stored.lastRun || 0;
-            const minutesSinceLast = (now - lastRun) / 1000 / 60;
+            const minutesSinceLast = (now - (stored.lastRun || 0)) / 1000 / 60;
             if (minutesSinceLast < AI_COOLDOWN_MINUTES) {
                 const remaining = Math.ceil(AI_COOLDOWN_MINUTES - minutesSinceLast);
                 return { allowed: false, reason: `⏳ Please wait ${remaining} more minute${remaining !== 1 ? 's' : ''} before running another analysis.` };
             }
-
-            // Check daily cap
             const todayCount = (stored.date === todayKey) ? (stored.count || 0) : 0;
             if (todayCount >= AI_DAILY_CAP) {
                 return { allowed: false, reason: `🚫 Daily limit of ${AI_DAILY_CAP} AI analyses reached. Resets at midnight.` };
             }
-
             return { allowed: true, todayKey, todayCount };
         }
 
@@ -661,6 +653,7 @@
                 alert(limitCheck.reason);
                 return;
             }
+
             const btn = document.getElementById('ai-analyse-btn');
             const section = document.getElementById('ai-section');
             const loading = document.getElementById('ai-loading');
@@ -760,7 +753,6 @@ RULES:
 
                 const data = await res.json();
                 const text = data.text || 'No response received.';
-
                 // Record successful usage for rate limiting
                 recordAiUsage(limitCheck.todayKey, limitCheck.todayCount);
 

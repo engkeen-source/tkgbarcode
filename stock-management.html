@@ -876,7 +876,8 @@
         }
 
         // --- INBOUND LOGIC ---
-        let scanned = [];
+        // Restore pending scans from localStorage so a page refresh doesn't wipe the hold
+        let scanned = JSON.parse(localStorage.getItem('tkg_inbound_scans') || '[]');
         let pendingCode = null;
         let pendingName = null;
         let pendingQty = 1;
@@ -1025,7 +1026,7 @@
         }
 
         function editQty(i, val) {
-            scanned[i].qty = parseInt(val) || 1;
+            scanned[i].qty = Math.max(1, parseInt(val) || 1); // clamp to min 1
             updateList();
             persistScans();
         }
@@ -1100,11 +1101,11 @@
             btn.disabled = true;
 
             try {
-                const supabaseUrl = 'https://yvjkkpntbceweojcriec.supabase.co';
-                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2amtrcG50YmNld2VvamNyaWVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzODIxNTIsImV4cCI6MjA4OTk1ODE1Mn0.nF5QCAoPAY07n0gY2-vW7lsGdPvFORnT2PoWSBgImDc';
-                const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+                // Use the shared AppDB client — consistent with the rest of the app
+                // and future-proof for the planned auth system.
+                if (!window.AppDB || !window.AppDB.supabaseClient) throw new Error('Database not initialised.');
 
-                const { error } = await client
+                const { error } = await window.AppDB.supabaseClient
                     .from('stock_ledger')
                     .delete()
                     .neq('id', '00000000-0000-0000-0000-000000000000');

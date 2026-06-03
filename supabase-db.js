@@ -26,58 +26,11 @@ if (!supabaseClient) {
 // Ensure Names match Catalog perfectly
 const canon = (name) => window.formatProductName ? window.formatProductName(name).toLowerCase() : name.toLowerCase();
 
-// Shared inventory math (single source of truth)
-const LOW_STOCK_THRESHOLD = 300;
-
-const computeBatchesFromLedger = (rawBatches) => {
-    let positiveBatches = [];
-    let negativeOffset = 0;
-
-    (rawBatches || []).forEach((b) => {
-        const qty = Number(b.qty) || 0;
-        const expiry = b.expiry || '';
-
-        if (qty > 0) {
-            positiveBatches.push({ expiry, qty });
-        } else if (qty < 0) {
-            // Only sweep negatives with no expiry to avoid double-deduction.
-            if (!expiry) {
-                negativeOffset += Math.abs(qty);
-            }
-        }
-    });
-
-    positiveBatches.sort((a, b) => {
-        if (!a.expiry && !b.expiry) return 0;
-        if (!a.expiry) return 1;
-        if (!b.expiry) return -1;
-        return new Date(a.expiry) - new Date(b.expiry);
-    });
-
-    for (let i = 0; i < positiveBatches.length; i++) {
-        if (negativeOffset <= 0) break;
-        const batch = positiveBatches[i];
-        if (batch.qty >= negativeOffset) {
-            batch.qty -= negativeOffset;
-            negativeOffset = 0;
-        } else {
-            negativeOffset -= batch.qty;
-            batch.qty = 0;
-        }
-    }
-
-    const finalBatches = positiveBatches
-        .map((b) => ({ expiry: b.expiry || '', qty: b.qty }))
-        .filter((b) => b.qty > 0 || !b.expiry);
-
-    if (negativeOffset > 0 && finalBatches.length === 0) {
-        finalBatches.push({ expiry: '', qty: 0 });
-    }
-
-    return finalBatches;
-};
-
 window.AppDB = {
+
+    // Expose the shared Supabase client so pages can use it directly
+    // without creating rogue instances (e.g. resetAllStock in stock-management.html)
+    get supabaseClient() { return supabaseClient; },
 
     async getOrders() {
         const { data, error } = await supabaseClient
@@ -205,10 +158,44 @@ window.AppDB = {
         const computedInventory = {};
 
         for (const [productName, rawBatches] of Object.entries(rawInventory)) {
-            const finalBatches = computeBatchesFromLedger(rawBatches);
+            let positiveBatches = [];
+            let negativeOffset = 0;
+
+            rawBatches.forEach(b => {
+                if (b.qty > 0) {
+                    positiveBatches.push({ expiry: b.expiry, qty: b.qty });
+                } else if (b.qty < 0) {
+                    negativeOffset += Math.abs(b.qty);
+                }
+            });
+
+            positiveBatches.sort((a, b) => {
+                if (!a.expiry && !b.expiry) return 0;
+                if (!a.expiry) return 1;
+                if (!b.expiry) return -1;
+                return new Date(a.expiry) - new Date(b.expiry);
+            });
+
+            for (let i = 0; i < positiveBatches.length; i++) {
+                if (negativeOffset <= 0) break;
+                const b = positiveBatches[i];
+                if (b.qty >= negativeOffset) {
+                    b.qty -= negativeOffset;
+                    negativeOffset = 0;
+                } else {
+                    negativeOffset -= b.qty;
+                    b.qty = 0;
+                }
+            }
+
+            const finalBatches = positiveBatches.filter(b => b.qty > 0 || !b.expiry);
+
+            if (negativeOffset > 0 && finalBatches.length === 0) {
+                finalBatches.push({ expiry: '', qty: 0 });
+            }
+
             computedInventory[productName] = finalBatches.length > 0 ? finalBatches : [{ expiry: '', qty: 0 }];
         }
-
         return computedInventory;
     },
 
@@ -269,8 +256,8 @@ window.AppDB = {
         for (const [productName, batches] of Object.entries(rawInventory)) {
             batches.forEach(b => {
                 // Only roll up positive balances. Products with a net negative balance
-                // (over-sold items) are skipped — they will self-correct once new inbound
-                // stock arrives, and we don't want to permanently bake in phantom debt.
+                // (over-sold items) are skipped — they self-correct on next inbound
+                // and we never want to permanently bake in phantom OUTBOUND debt.
                 if (b.qty > 0) {
                     forwardRows.push({
                         product_name: canon(productName),
@@ -998,26 +985,5 @@ window.AppDB = {
             .getPublicUrl(path);
 
         return urlData.publicUrl;
-    }
-};
-
-// Shared inventory helpers for all pages
-window.InventoryMath = {
-    LOW_STOCK_THRESHOLD,
-    computeBatches(rawBatches) {
-        return computeBatchesFromLedger(rawBatches);
-    },
-    computeTotal(rawBatches) {
-        return this.computeBatches(rawBatches).reduce((sum, b) => sum + (Number(b.qty) || 0), 0);
-    },
-    computeTotalsMap(liveInventory) {
-        const totals = {};
-        Object.entries(liveInventory || {}).forEach(([productName, rawBatches]) => {
-            totals[productName] = this.computeTotal(rawBatches);
-        });
-        return totals;
-    },
-    isLowStock(total) {
-        return Number(total) < LOW_STOCK_THRESHOLD;
     }
 };

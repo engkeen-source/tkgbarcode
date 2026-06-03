@@ -247,7 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const computedBatches = this.getComputedBatches(productName);
             const stock = computedBatches.reduce((sum, b) => sum + b.computedQty, 0);
-            const isLow = stock < window.InventoryMath.LOW_STOCK_THRESHOLD;
+            const isLow = stock < 10;
+
             // Update low-stock card styling
             card.classList.toggle('low-stock', isLow);
 
@@ -293,8 +294,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         saveInventory() {
-            // Data is already live in Supabase — no localStorage write needed.
-            // This function now exists solely for the button's visual feedback.
+            // Data is always live in Supabase — no localStorage write needed.
+            // This function exists solely for the save button's visual feedback.
             const saveBtn = document.getElementById('save-inventory-btn');
             const originalText = saveBtn.textContent;
             saveBtn.textContent = 'Synced!';
@@ -348,8 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (b.qty < 0) {
                     // Only FIFO-sweep deductions that have NO expiry recorded.
                     // Expiry-specific negatives are already baked into the per-batch qty
-                    // by getLiveInventory() and must NOT be swept again — doing so would
-                    // cause a double-deduction on the earliest expiry batch.
+                    // by getLiveInventory() — sweeping them again causes double-deduction.
                     if (!b.expiry) {
                         negativeOffset += Math.abs(b.qty);
                     }
@@ -414,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const computedBatches = this.getComputedBatches(productName);
 
                     const stock = computedBatches.reduce((sum, b) => sum + b.computedQty, 0);
-                    const isLow = stock < window.InventoryMath.LOW_STOCK_THRESHOLD; // Threshold for low stock
+                    const isLow = stock < 10; // Threshold for low stock
 
                     const card = document.createElement('div');
                     card.className = `inventory-card ${isLow ? 'low-stock' : ''}`;
@@ -563,9 +563,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (isPlus) {
                             await AppDB.insertAdjustment(this.currentModalProduct, 1, expiry, "Manual +1 Edit");
                         } else {
-                            // Read the live batch qty from in-memory inventory data,
-                            // NOT from the DOM input — the DOM may be stale if another
-                            // tab or user has made changes since the modal was opened.
+                            // Read live qty from in-memory inventory data, NOT the DOM input.
+                            // The DOM may be stale if another tab made changes since the modal opened.
                             const liveBatches = this.inventory[this.currentModalProduct] || [];
                             const liveBatch = liveBatches.find(b => (b.expiry || '') === (expiry || ''));
                             const liveQty = liveBatch ? liveBatch.qty : 0;
