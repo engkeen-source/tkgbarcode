@@ -432,8 +432,9 @@
 
         .batch-row {
             display: grid;
-            grid-template-columns: minmax(150px, 1.2fr) 110px minmax(160px, 1fr) 36px;
-            grid-template-areas: "expiry live adjust remove";
+            /* We removed the 110px 'live' column, re-distributing the space */
+            grid-template-columns: minmax(140px, 1.5fr) minmax(140px, 1fr) 36px;
+            grid-template-areas: "expiry adjust remove";
             gap: 0.75rem;
             align-items: center;
             background: var(--bg-app);
@@ -493,10 +494,9 @@
 
         @media (max-width: 640px) {
             .batch-row {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: 1fr 40px;
                 grid-template-areas:
                     "expiry remove"
-                    "live live"
                     "adjust adjust";
             }
 
@@ -738,7 +738,6 @@
                 <div class="logo">TKGBarcodeOps</div>
             </div>
             <div class="header-actions" id="header-actions">
-                <button class="primary-btn" id="inv-save-btn" style="background: var(--success);">Save Changes</button>
                 <button class="primary-btn" id="inb-save-btn" style="background: var(--success); display:none;"
                     onclick="saveData()">💾 Log & Sync Stock</button>
                 <button class="primary-btn" id="reset-stock-btn" onclick="resetAllStock()"
@@ -865,7 +864,6 @@
             btn.classList.add('active');
 
             // Show/hide buttons based on active tab
-            document.getElementById('inv-save-btn').style.display = tab === 'inventory' ? 'inline-flex' : 'none';
             document.getElementById('inb-save-btn').style.display = tab === 'inbound' ? 'inline-flex' : 'none';
             document.getElementById('reset-stock-btn').style.display = tab === 'inventory' ? 'inline-flex' : 'none';
 

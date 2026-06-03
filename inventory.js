@@ -157,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
                 <div class="batch-row batch-row--header">
                     <div class="batch-cell batch-expiry">Expiry Date</div>
-                    <div class="batch-cell batch-live">Live Stock</div>
                     <div class="batch-cell batch-adjust">Adjust</div>
                     <div class="batch-cell batch-remove">Remove</div>
                 </div>
@@ -168,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const qty = Number(batch.qty) || 0;
             const expiryIso = batch.expiry || '';
             const displayDate = this.formatDisplayDate(expiryIso);
-            const remColor = qty < 0 ? 'var(--danger)' : 'var(--accent)';
             const isNewRow = options.isNewRow ? ' data-new-row="1"' : '';
             const isNewClass = options.isNewRow ? ' is-new' : '';
 
@@ -181,10 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button type="button" class="control-btn calendar-btn" title="Pick date">📅</button>
                                 <input type="date" class="batch-date-picker" value="${expiryIso}">
                             </div>
-                        </div>
-                        <div class="batch-cell batch-live">
-                            <span class="batch-live-label">Live</span>
-                            <strong class="batch-live-value" style="color: ${remColor};">${qty}</strong>
                         </div>
                         <div class="batch-cell batch-adjust">
                             <div class="stock-control mini" style="display: flex; align-items: center; gap: 6px;">
@@ -200,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
+            // Fallback stacked layout for very small screens
             return `
                 <div class="stock-batch"${isNewRow} style="flex-direction: column; align-items: flex-start; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
@@ -210,12 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <button class="control-btn remove-batch-btn" data-expiry="${expiryIso}" data-qty="${qty}" style="color: var(--danger); font-size: 1.25rem; font-weight: bold; background: none; margin-left: auto;">×</button>
                     </div>
-                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                            Live Stock: <strong style="color: ${remColor}; font-size: 1.1rem;">${qty}</strong>
-                        </div>
+                    <div style="display: flex; justify-content: flex-end; width: 100%; align-items: center;">
                         <div class="stock-control mini" style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 0.75rem; color: var(--text-secondary); margin-right: 4px;">Adjust:</span>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); margin-right: 4px;">Qty:</span>
                             <button class="control-btn minus-btn" data-expiry="${expiryIso}">−</button>
                             <input type="number" class="stock-input" value="${qty}" data-expiry="${expiryIso}" data-original-qty="${qty}" inputmode="numeric" min="0">
                             <button class="control-btn plus-btn" data-expiry="${expiryIso}">+</button>
@@ -293,18 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        saveInventory() {
-            // Data is always live in Supabase — no localStorage write needed.
-            // This function exists solely for the save button's visual feedback.
-            const saveBtn = document.getElementById('save-inventory-btn');
-            const originalText = saveBtn.textContent;
-            saveBtn.textContent = 'Synced!';
-            saveBtn.style.background = '#059669';
-            setTimeout(() => {
-                saveBtn.textContent = originalText;
-                saveBtn.style.background = 'var(--success)';
-            }, 1000);
-        },
 
         renderCategories() {
             const tabsContainer = document.getElementById('category-tabs');
@@ -695,13 +675,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Save Button (Sync to cloud)
-            document.getElementById('save-inventory-btn').addEventListener('click', async () => {
-                // Because we send API requests dynamically, we just do a fresh pull here to guarantee sync.
-                await this.loadInventory();
-                this.saveInventory(); // UI Feedback
-                this.renderModalBatches();
-            });
         },
 
         openModal(productName) {
