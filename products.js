@@ -25,7 +25,7 @@ try {
 // --- 1. INDIVIDUAL PRODUCTS CATALOG ---
 const PRODUCT_CATALOG = {
     "Popcorn 30g": {
-        "chocolate 30g": { type: "single", barcodes: ["794712851851"], image: "images/30gProducts/chocolate30g.png" },
+        "chocolate 30g": { type: "single", barcodes: ["794712851851"], image: "images/30gProducts/CH30g.png" },
         "kaya butter toast 30g": { type: "single", barcodes: ["794712851882"], image: "images/30gProducts/KBT30g.png" },
         "nasi lemak 30g": { type: "single", barcodes: ["794712851899"], image: "images/30gProducts/NL30g.png" },
         "pulut hitam 30g": { type: "single", barcodes: ["794712851905"], image: "images/30gProducts/PH30g.png" },
@@ -43,7 +43,7 @@ const PRODUCT_CATALOG = {
         "salted caramel 65g": { type: "single", barcodes: ["793591857138"], image: "images/65gProducts/SC65G.png" },
         "chilli crab 65g": { type: "single", barcodes: ["793591857107"], image: "images/65gProducts/CC65G.png" },
         "chicken floss 65g": { type: "single", barcodes: ["793618011949"], image: "images/65gProducts/CF65G.png" },
-        "fish head curry 65g": { type: "single", barcodes: ["793591857091"], image: "" }
+        "fish head curry 65g": { type: "single", barcodes: ["793591857091"], image: "images/65gProducts/FHC65G.png" }
     },
     "Poppa": {
         "poppa salted caramel": { type: "single", barcodes: ["796548081457"], image: "images/Poppa/SCPoppa.webp" },
@@ -63,7 +63,7 @@ const PRODUCT_CATALOG = {
         "brownie crisps (108g) banana fritter": { type: "single", barcodes: ["796548081884"], image: "images/Bronys/BronyBAN108G.jpg" },
         "brownie crisps (108g) chocolate chip": { type: "single", barcodes: ["796548081860"], image: "images/Bronys/BronyCHC108G.jpg" },
         "brownie crisps (108g) peanut pancake": { type: "single", barcodes: ["796548081877"], image: "images/Bronys/BronyPP108G.jpg" },
-        "brownie crisps (35g) matcha": { type: "single", barcodes: ["796548081150"], image: "" },
+        "brownie crisps (35g) matcha": { type: "single", barcodes: ["796548081150"], image: "images/Bronys/BronyMATCHA35G.jpg" },
     },
     "Merchandise": {
         "the kettle gourmet limited edition chinese new year ang pow (1pack 5pcs)": { type: "single", barcodes: ["meowmeow"], image: "" }

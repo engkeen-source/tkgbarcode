@@ -734,7 +734,6 @@
                 <div class="logo">TKGBarcodeOps</div>
             </div>
             <div class="header-actions" id="header-actions">
-                <button class="primary-btn" id="inv-save-btn" style="background: var(--success);">Save Changes</button>
                 <button class="primary-btn" id="inb-save-btn" style="background: var(--success); display:none;"
                     onclick="saveData()">💾 Log & Sync Stock</button>
                 <button class="primary-btn" id="reset-stock-btn" onclick="resetAllStock()"
@@ -848,7 +847,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="products.js"></script>
     <script src="supabase-db.js"></script>
-    <script src="inventory.js"></script>
+    <script src="stock-management.js"></script>
     <script src="notifications.js"></script>
 
     <script>
@@ -861,7 +860,6 @@
             btn.classList.add('active');
 
             // Show/hide buttons based on active tab
-            document.getElementById('inv-save-btn').style.display = tab === 'inventory' ? 'inline-flex' : 'none';
             document.getElementById('inb-save-btn').style.display = tab === 'inbound' ? 'inline-flex' : 'none';
             document.getElementById('reset-stock-btn').style.display = tab === 'inventory' ? 'inline-flex' : 'none';
 
