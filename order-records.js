@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             productRows.forEach((row) => {
                 const tr = document.createElement('tr');
-                const lowStockClass = row.dynStock < 10
+                const lowStockClass = row.dynStock < 300
                     ? 'color: var(--danger); font-weight: bold;'
                     : '';
                 const safeName = row.name.replace(/'/g, "\\'");
@@ -665,7 +665,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const rawBatches = liveInventory[productName] || [];
                         const batches = this.getComputedBatches(rawBatches);
                         const total = batches.reduce((sum, b) => sum + b.qty, 0);
-                        if (total < window.InventoryMath.LOW_STOCK_THRESHOLD) {
+
+                        if (total < 300) {
                             lowItems.push({ name: productName, stock: total });
                         }
                     }
@@ -674,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const [productName, rawBatches] of Object.entries(liveInventory)) {
                     const batches = this.getComputedBatches(rawBatches);
                     const total = batches.reduce((sum, b) => sum + b.qty, 0);
-                    if (total < window.InventoryMath.LOW_STOCK_THRESHOLD) {
+                    if (total < 300) {
                         lowItems.push({ name: productName, stock: total });
                     }
                 }
@@ -709,8 +710,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 borderRadius: 6
                             },
                             {
-                                label: 'Low Stock Threshold (' + window.InventoryMath.LOW_STOCK_THRESHOLD + ')',
-                                data: new Array(lowItems.length).fill(window.InventoryMath.LOW_STOCK_THRESHOLD),
+                                label: 'Low Stock Threshold (300)',
+                                data: new Array(lowItems.length).fill(300),
                                 type: 'line',
                                 borderColor: 'rgba(255,255,255,0.3)',
                                 borderDash: [6, 4],
