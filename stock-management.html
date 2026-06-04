@@ -723,6 +723,262 @@
             overflow-y: auto;
             flex: 1;
         }
+
+        /* ===== REMOVE BATCH POPUP ===== */
+        #remove-batch-popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 1rem;
+            backdrop-filter: blur(4px);
+            animation: rbpFadeIn 0.15s ease;
+        }
+
+        @keyframes rbpFadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        #remove-batch-popup {
+            background: var(--bg-card, #1e293b);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: rbpSlideUp 0.2s ease;
+        }
+
+        @keyframes rbpSlideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .rbp-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .rbp-icon {
+            font-size: 1.8rem;
+        }
+
+        .rbp-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary, white);
+        }
+
+        .rbp-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-secondary, #94a3b8);
+            margin-top: 2px;
+        }
+
+        .rbp-info-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .rbp-info-box {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+        }
+
+        .rbp-info-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary, #94a3b8);
+            margin-bottom: 4px;
+        }
+
+        .rbp-info-val {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary, white);
+        }
+
+        .rbp-qty {
+            color: #ef4444 !important;
+            font-size: 1.3rem !important;
+        }
+
+        .rbp-field {
+            margin-bottom: 1.25rem;
+        }
+
+        .rbp-label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary, #94a3b8);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .rbp-reason-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .rbp-reason-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            color: var(--text-primary, white);
+            font-size: 0.82rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s;
+            width: 100%;
+        }
+
+        .rbp-reason-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .rbp-reason-btn.active {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: #ef4444;
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .rbp-input {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-primary, white);
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+
+        .rbp-input:focus {
+            outline: none;
+            border-color: var(--accent, #378ADD);
+        }
+
+        .rbp-type-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .rbp-type-opt {
+            cursor: pointer;
+        }
+
+        .rbp-type-opt input[type="radio"] {
+            display: none;
+        }
+
+        .rbp-type-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.65rem 0.9rem;
+            transition: all 0.15s;
+        }
+
+        .rbp-type-opt input:checked+.rbp-type-label {
+            background: rgba(55, 138, 221, 0.12);
+            border-color: var(--accent, #378ADD);
+        }
+
+        .rbp-type-label:hover {
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .rbp-type-icon {
+            font-size: 1.2rem;
+        }
+
+        .rbp-type-label strong {
+            display: block;
+            font-size: 0.88rem;
+            color: var(--text-primary, white);
+        }
+
+        .rbp-type-label small {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary, #94a3b8);
+        }
+
+        .rbp-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .rbp-btn {
+            flex: 1;
+            padding: 0.85rem;
+            border-radius: 10px;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+
+        .rbp-btn-cancel {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary, #94a3b8);
+        }
+
+        .rbp-btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .rbp-btn-confirm {
+            background: #ef4444;
+            color: white;
+        }
+
+        .rbp-btn-confirm:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        .rbp-btn-confirm:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
@@ -747,6 +1003,7 @@
         <div class="page-tabs">
             <button class="page-tab active" onclick="switchTab('inventory', this)">📋 Stock Inventory</button>
             <button class="page-tab" onclick="switchTab('inbound', this)">📥 Stock Inbound</button>
+            <button class="page-tab" onclick="switchTab('history', this)">📖 Adjustment History</button>
         </div>
 
         <!-- TAB 1: Stock Inventory -->
@@ -810,6 +1067,95 @@
                 </aside>
             </main>
         </div>
+
+        <!-- TAB 3: Adjustment History -->
+        <div id="tab-history" class="tab-content">
+            <main style="max-width:1200px; margin:0 auto; padding:2rem;">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+                    <div>
+                        <h1 style="font-size:1.6rem; font-weight:800; margin:0;">📋 Adjustment History</h1>
+                        <div style="color:var(--text-secondary); font-size:0.85rem; margin-top:4px;">All manual stock
+                            removals and adjustments with reasons</div>
+                    </div>
+                    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                        <input type="text" id="hist-search" placeholder="Search product..."
+                            style="padding:0.6rem 1rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.05); color:white; font-size:0.9rem; min-width:180px;">
+                        <select id="hist-type-filter"
+                            style="padding:0.6rem 1rem; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(20,20,30,0.95); color:white; font-size:0.9rem;">
+                            <option value="all">All Types</option>
+                            <option value="MANUAL_DEDUCT">🗂️ Stock Adjustment</option>
+                            <option value="OUTBOUND">📦 Outbound</option>
+                            <option value="DEFECT">⚠️ Defect</option>
+                        </select>
+                        <button onclick="loadAdjustmentHistory()"
+                            style="padding:0.6rem 1.2rem; border-radius:8px; border:none; background:var(--accent,#378ADD); color:white; font-weight:600; cursor:pointer; font-size:0.9rem;">🔄
+                            Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Summary cards -->
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem;"
+                    id="hist-summary">
+                    <div
+                        style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-top:3px solid #94a3b8; border-radius:12px; padding:1.2rem;">
+                        <div
+                            style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary); margin-bottom:6px;">
+                            Total Adjustments</div>
+                        <div style="font-size:1.8rem; font-weight:800;" id="hist-total">—</div>
+                    </div>
+                    <div
+                        style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-top:3px solid #ef4444; border-radius:12px; padding:1.2rem;">
+                        <div
+                            style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary); margin-bottom:6px;">
+                            Total Units Removed</div>
+                        <div style="font-size:1.8rem; font-weight:800; color:#ef4444;" id="hist-units">—</div>
+                    </div>
+                    <div
+                        style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-top:3px solid #f59e0b; border-radius:12px; padding:1.2rem;">
+                        <div
+                            style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary); margin-bottom:6px;">
+                            Most Common Reason</div>
+                        <div style="font-size:1rem; font-weight:700; color:#f59e0b;" id="hist-top-reason">—</div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div
+                    style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:14px; overflow:hidden;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+                        <thead>
+                            <tr style="background:rgba(0,0,0,0.25);">
+                                <th
+                                    style="padding:1rem 1.25rem; text-align:left; color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:600; white-space:nowrap;">
+                                    Date & Time</th>
+                                <th
+                                    style="padding:1rem 1.25rem; text-align:left; color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">
+                                    Product</th>
+                                <th
+                                    style="padding:1rem 1.25rem; text-align:center; color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">
+                                    Units Removed</th>
+                                <th
+                                    style="padding:1rem 1.25rem; text-align:left; color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">
+                                    Type</th>
+                                <th
+                                    style="padding:1rem 1.25rem; text-align:left; color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">
+                                    Reason</th>
+                                <th
+                                    style="padding:1rem 1.25rem; text-align:left; color:var(--text-secondary); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">
+                                    Batch Expiry</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hist-tbody">
+                            <tr>
+                                <td colspan="6" style="text-align:center; padding:3rem; color:var(--text-secondary);">
+                                    Click the Refresh button or switch to this tab to load history.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
     </div>
 
     <!-- Inventory: Batch Modal -->
@@ -862,13 +1208,19 @@
             // Show/hide buttons based on active tab
             document.getElementById('inb-save-btn').style.display = tab === 'inbound' ? 'inline-flex' : 'none';
             document.getElementById('reset-stock-btn').style.display = tab === 'inventory' ? 'inline-flex' : 'none';
+            if (tab === 'history') {
+                document.getElementById('inb-save-btn').style.display = 'none';
+                document.getElementById('reset-stock-btn').style.display = 'none';
+            }
 
-            // Re-render inventory when switching back to inventory tab
+            // Re-render inventory when switching back to inventory tab + load history when switching to history tab
             if (tab === 'inventory' && window._inventoryApp) {
                 window._inventoryApp.loadInventory();
             }
+            if (tab === 'history') {
+                loadAdjustmentHistory();
+            }
         }
-
         // --- INBOUND LOGIC ---
         // Restore pending scans from localStorage so a page refresh doesn't wipe the hold
         let scanned = JSON.parse(localStorage.getItem('tkg_inbound_scans') || '[]');
@@ -1127,6 +1479,86 @@
                 btn.disabled = false;
             }
         }
+
+        // --- ADJUSTMENT HISTORY ---
+        const TYPE_LABELS = {
+            'MANUAL_DEDUCT': { label: '🗂️ Stock Adjustment', color: '#94a3b8' },
+            'OUTBOUND': { label: '📦 Outbound', color: '#60a5fa' },
+            'DEFECT': { label: '⚠️ Defect', color: '#f87171' },
+        };
+
+        let historyData = [];
+
+        async function loadAdjustmentHistory() {
+            const tbody = document.getElementById('hist-tbody');
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-secondary);">⏳ Loading...</td></tr>`;
+
+            try {
+                historyData = await AppDB.getAdjustmentHistory(500);
+                renderHistoryTable();
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:3rem; color:#ef4444;">❌ Failed to load: ${e.message}</td></tr>`;
+            }
+        }
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById('hist-tbody');
+            const search = (document.getElementById('hist-search').value || '').toLowerCase().trim();
+            const typeFilter = document.getElementById('hist-type-filter').value;
+
+            let filtered = historyData.filter(row => {
+                const matchSearch = !search || (row.product_name || '').toLowerCase().includes(search);
+                const matchType = typeFilter === 'all' || row.transaction_type === typeFilter;
+                return matchSearch && matchType;
+            });
+
+            // Summary cards
+            const totalUnits = filtered.reduce((s, r) => s + (Number(r.qty) || 0), 0);
+            const reasonCounts = {};
+            filtered.forEach(r => {
+                const reason = r.notes || 'No reason';
+                reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+            });
+            const topReason = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1])[0];
+
+            document.getElementById('hist-total').textContent = filtered.length;
+            document.getElementById('hist-units').textContent = totalUnits;
+            document.getElementById('hist-top-reason').textContent = topReason ? topReason[0] : '—';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-secondary);">No records found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(row => {
+                const date = row.created_at
+                    ? new Date(row.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : '—';
+                const typeInfo = TYPE_LABELS[row.transaction_type] || { label: row.transaction_type, color: '#94a3b8' };
+                const expiry = row.expiry
+                    ? new Date(row.expiry).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : '—';
+                const productDisplay = window.formatProductName ? window.formatProductName(row.product_name) : row.product_name;
+
+                return `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                        <td style="padding:0.9rem 1.25rem; color:var(--text-secondary); white-space:nowrap; font-size:0.82rem;">${date}</td>
+                        <td style="padding:0.9rem 1.25rem; font-weight:600;">${productDisplay}</td>
+                        <td style="padding:0.9rem 1.25rem; text-align:center; font-weight:700; color:#ef4444;">−${row.qty}</td>
+                        <td style="padding:0.9rem 1.25rem;">
+                            <span style="font-size:0.78rem; font-weight:600; padding:3px 10px; border-radius:6px; background:${typeInfo.color}22; color:${typeInfo.color}; border:1px solid ${typeInfo.color}44; white-space:nowrap;">
+                                ${typeInfo.label}
+                            </span>
+                        </td>
+                        <td style="padding:0.9rem 1.25rem; color:var(--text-secondary);">${row.notes || '—'}</td>
+                        <td style="padding:0.9rem 1.25rem; color:var(--text-secondary); font-size:0.82rem;">${expiry}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('hist-search').addEventListener('input', renderHistoryTable);
+        document.getElementById('hist-type-filter').addEventListener('change', renderHistoryTable);
     </script>
 </body>
 

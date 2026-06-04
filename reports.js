@@ -140,9 +140,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (row.transaction_type === 'DEFECT') this.productStats[name].defects += qty;
                     // RETURN = restocked item coming back into stock — counts as inbound
                     if (row.transaction_type === 'RETURN') this.productStats[name].inbound += qty;
+                    // MANUAL_DEDUCT = manual × button removal — counts as outbound
+                    if (row.transaction_type === 'MANUAL_DEDUCT') this.productStats[name].outbound += qty;
                     if (row.transaction_type === 'ADJUSTMENT') {
                         if (qty > 0) this.productStats[name].inbound += qty;
                         else this.productStats[name].outbound += Math.abs(qty);
+                    }
+                    // SYSTEM_ROLLUP = entries written after ledger rollup — treat as inbound baseline
+                    if (row.transaction_type === 'INBOUND' && row.reference_id === 'SYSTEM_ROLLUP') {
+                        // Already counted above by INBOUND — no double count needed
+                        // This comment exists to document that SYSTEM_ROLLUP rows ARE correctly
+                        // included because consolidateLedger writes them as INBOUND type
                     }
                 });
             }
@@ -151,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
             //    This powers the chart and avoids all order-date / bundle-qty ambiguity.
             if (Array.isArray(this.ledger)) {
                 this.ledger.forEach(row => {
-                    if (!row || row.transaction_type !== 'OUTBOUND') return;
+                    if (!row || (row.transaction_type !== 'OUTBOUND' && row.transaction_type !== 'MANUAL_DEDUCT')) return;
                     if (row.reference_id && cancelledOrderIds.has(String(row.reference_id))) return;
 
                     const name = initProduct(row.product_name);

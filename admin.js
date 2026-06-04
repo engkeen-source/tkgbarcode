@@ -568,10 +568,18 @@ function renderBackups() {
                 <button class="btn btn-primary" style="background:#8b5cf6" onclick="applyStandardRecipe()">Apply Standard 8-Pack Recipe to All Gift Boxes</button>
             </div>
 
-            <div style="background: var(--bg-card); padding: 2rem; border-radius: 12px; border: 1px solid var(--danger); grid-column: span 2;">
-                <h3 style="color: var(--danger)">⚠️ Clean & Consolidate Ledger Database</h3>
-                <p style="color: var(--text-secondary); margin: 1rem 0;">This will calculate the live sum for every product, delete the thousands of individual historical log rows from the database, and replace them with a clean "Balance Forward" row. <b>This permanently erases the timestamps of when exact items were logged in the ledger!</b></p>
-                <button class="btn btn-primary" style="background:var(--danger)" onclick="executeLedgerRollup()">Wipe History & Consolidate Live Sums</button>
+            <div style="background: var(--bg-card); padding: 2rem; border-radius: 12px; border: 1px solid rgba(239,68,68,0.3); grid-column: span 2; opacity: 0.6;">
+                <h3 style="color: var(--danger)">🔒 Ledger Rollup — Permanently Disabled</h3>
+                <p style="color: var(--text-secondary); margin: 1rem 0;">
+                    This function has been <strong style="color:#ef4444;">disabled</strong> to protect warehouse data accuracy.
+                    Running a ledger rollup permanently destroys your inbound, outbound, and defect history,
+                    breaks the Reports and Statistics page, and corrupts the Stock Forecast burn rates.
+                    <br><br>
+                    <strong style="color:white;">The Supabase database handles tens of thousands of rows without any performance issue. There is no reason to ever run this in a live warehouse.</strong>
+                </p>
+                <button class="btn" style="background:rgba(255,255,255,0.05); color:var(--text-secondary); cursor:not-allowed; opacity:0.5;" disabled>
+                    Wipe History & Consolidate Live Sums (Permanently Disabled)
+                </button>
             </div>
         </div>
     `;

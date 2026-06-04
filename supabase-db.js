@@ -137,7 +137,7 @@ window.AppDB = {
             const product = canon(row.product_name);
             const expiry = row.expiry || '';
             // OUTBOUND and DEFECT reduce stock; INBOUND, ADJUSTMENT, and RETURN all add to stock.
-            const isDeduction = ['OUTBOUND', 'DEFECT'].includes(row.transaction_type);
+            const isDeduction = ['OUTBOUND', 'DEFECT', 'MANUAL_DEDUCT'].includes(row.transaction_type);
             const qty = isDeduction ? -row.qty : row.qty;
 
             if (!inventory[product]) inventory[product] = [];
@@ -232,7 +232,7 @@ window.AppDB = {
      * Optional manual adjustment function for the Inventory modal.
      */
     async insertAdjustment(productName, qtyIncrease, expiry, reason) {
-        const type = qtyIncrease >= 0 ? 'ADJUSTMENT' : 'OUTBOUND';
+        const type = qtyIncrease >= 0 ? 'ADJUSTMENT' : 'MANUAL_DEDUCT';
         const { error } = await supabaseClient.from('stock_ledger').insert({
             product_name: canon(productName),
             transaction_type: type,
@@ -242,6 +242,30 @@ window.AppDB = {
             notes: reason || 'Manual Stock Edit'
         });
         if (error) throw error;
+    },
+
+    async insertAdjustmentTyped(productName, qtyIncrease, expiry, reason, transactionType) {
+        const type = transactionType || (qtyIncrease >= 0 ? 'ADJUSTMENT' : 'MANUAL_DEDUCT');
+        const { error } = await supabaseClient.from('stock_ledger').insert({
+            product_name: canon(productName),
+            transaction_type: type,
+            qty: Math.abs(qtyIncrease),
+            expiry: expiry || null,
+            reference_id: 'MANUAL_ADJUST',
+            notes: reason || 'Manual Stock Edit'
+        });
+        if (error) throw error;
+    },
+
+    async getAdjustmentHistory(limit = 200) {
+        const { data, error } = await supabaseClient
+            .from('stock_ledger')
+            .select('*')
+            .eq('reference_id', 'MANUAL_ADJUST')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+        if (error) throw error;
+        return data || [];
     },
 
     /**
@@ -668,7 +692,7 @@ window.AppDB = {
         let total = 0;
         (data || []).forEach(row => {
             // OUTBOUND and DEFECT reduce stock; INBOUND, ADJUSTMENT, and RETURN all add to stock.
-            const isDeduction = ['OUTBOUND', 'DEFECT'].includes(row.transaction_type);
+            const isDeduction = ['OUTBOUND', 'DEFECT', 'MANUAL_DEDUCT'].includes(row.transaction_type);
             total += isDeduction ? -row.qty : row.qty;
         });
         return total;

@@ -167,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const qty = Number(batch.qty) || 0;
             const expiryIso = batch.expiry || '';
             const displayDate = this.formatDisplayDate(expiryIso);
-            const remColor = qty < 0 ? 'var(--danger)' : 'var(--accent)';
             const isNewRow = options.isNewRow ? ' data-new-row="1"' : '';
             const isNewClass = options.isNewRow ? ' is-new' : '';
 
@@ -195,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
+            // Fallback stacked layout for very small screens
             return `
                 <div class="stock-batch"${isNewRow} style="flex-direction: column; align-items: flex-start; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
@@ -205,12 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <button class="control-btn remove-batch-btn" data-expiry="${expiryIso}" data-qty="${qty}" style="color: var(--danger); font-size: 1.25rem; font-weight: bold; background: none; margin-left: auto;">×</button>
                     </div>
-                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                            Live Stock: <strong style="color: ${remColor}; font-size: 1.1rem;">${qty}</strong>
-                        </div>
+                    <div style="display: flex; justify-content: flex-end; width: 100%; align-items: center;">
                         <div class="stock-control mini" style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 0.75rem; color: var(--text-secondary); margin-right: 4px;">Adjust:</span>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); margin-right: 4px;">Qty:</span>
                             <button class="control-btn minus-btn" data-expiry="${expiryIso}">−</button>
                             <input type="number" class="stock-input" value="${qty}" data-expiry="${expiryIso}" data-original-qty="${qty}" inputmode="numeric" min="0">
                             <button class="control-btn plus-btn" data-expiry="${expiryIso}">+</button>
@@ -242,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const computedBatches = this.getComputedBatches(productName);
             const stock = computedBatches.reduce((sum, b) => sum + b.computedQty, 0);
-            const isLow = stock < 300;
+            const isLow = stock < 10;
 
             // Update low-stock card styling
             card.classList.toggle('low-stock', isLow);
@@ -288,18 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
-        saveInventory() {
-            // Data is already live in Supabase — no localStorage write needed.
-            // This function now exists solely for the button's visual feedback.
-            const saveBtn = document.getElementById('save-inventory-btn');
-            const originalText = saveBtn.textContent;
-            saveBtn.textContent = 'Synced!';
-            saveBtn.style.background = '#059669';
-            setTimeout(() => {
-                saveBtn.textContent = originalText;
-                saveBtn.style.background = 'var(--success)';
-            }, 1000);
-        },
 
         renderCategories() {
             const tabsContainer = document.getElementById('category-tabs');
@@ -344,8 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (b.qty < 0) {
                     // Only FIFO-sweep deductions that have NO expiry recorded.
                     // Expiry-specific negatives are already baked into the per-batch qty
-                    // by getLiveInventory() and must NOT be swept again — doing so would
-                    // cause a double-deduction on the earliest expiry batch.
+                    // by getLiveInventory() — sweeping them again causes double-deduction.
                     if (!b.expiry) {
                         negativeOffset += Math.abs(b.qty);
                     }
@@ -410,7 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const computedBatches = this.getComputedBatches(productName);
 
                     const stock = computedBatches.reduce((sum, b) => sum + b.computedQty, 0);
-                    const isLow = stock < 300; // Threshold for low stock
+                    const isLow = stock < 10; // Threshold for low stock
+
                     const card = document.createElement('div');
                     card.className = `inventory-card ${isLow ? 'low-stock' : ''}`;
 
@@ -528,18 +513,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     if (qtyToClear > 0) {
-                        if (!confirm("Remove this exact batch tracking?")) return;
-                        target.disabled = true;
-                        try {
-                            await AppDB.insertAdjustment(this.currentModalProduct, -qtyToClear, expiry, "Manual Batch Clear");
-                            await this.loadInventory(true); // refresh data only
-                            this.renderModalBatches();
-                            this.updateCardStockDisplay(this.currentModalProduct);
-                        } catch (err) {
-                            alert("Failed to clear batch: " + err.message);
-                            target.disabled = false;
-                            this.renderModalBatches();
-                        }
+                        this.showRemoveBatchPopup({
+                            productName: this.currentModalProduct,
+                            expiry,
+                            qtyToClear,
+                            triggerBtn: target
+                        });
                     }
                 } else if (target.classList.contains('control-btn') && !target.classList.contains('remove-batch-btn')) {
                     const row = target.closest('.batch-row') || target.closest('.stock-batch');
@@ -558,9 +537,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (isPlus) {
                             await AppDB.insertAdjustment(this.currentModalProduct, 1, expiry, "Manual +1 Edit");
                         } else {
-                            // Read the live batch qty from in-memory inventory data,
-                            // NOT from the DOM input — the DOM may be stale if another
-                            // tab or user has made changes since the modal was opened.
+                            // Read live qty from in-memory inventory data, NOT the DOM input.
+                            // The DOM may be stale if another tab made changes since the modal opened.
                             const liveBatches = this.inventory[this.currentModalProduct] || [];
                             const liveBatch = liveBatches.find(b => (b.expiry || '') === (expiry || ''));
                             const liveQty = liveBatch ? liveBatch.qty : 0;
@@ -691,13 +669,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Save Button (Sync to cloud)
-            document.getElementById('save-inventory-btn').addEventListener('click', async () => {
-                // Because we send API requests dynamically, we just do a fresh pull here to guarantee sync.
-                await this.loadInventory();
-                this.saveInventory(); // UI Feedback
-                this.renderModalBatches();
-            });
         },
 
         openModal(productName) {
@@ -786,6 +757,135 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        showRemoveBatchPopup({ productName, expiry, qtyToClear, triggerBtn }) {
+            const existing = document.getElementById('remove-batch-popup-overlay');
+            if (existing) existing.remove();
+
+            const displayExpiry = expiry
+                ? new Date(expiry).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : 'No expiry date';
+
+            const overlay = document.createElement('div');
+            overlay.id = 'remove-batch-popup-overlay';
+            overlay.innerHTML = `
+                <div id="remove-batch-popup">
+                    <div class="rbp-header">
+                        <div class="rbp-icon">⚠️</div>
+                        <div>
+                            <div class="rbp-title">Remove Batch Stock</div>
+                            <div class="rbp-subtitle">${productName}</div>
+                        </div>
+                    </div>
+                    <div class="rbp-info-row">
+                        <div class="rbp-info-box">
+                            <div class="rbp-info-label">Batch Expiry</div>
+                            <div class="rbp-info-val">${displayExpiry}</div>
+                        </div>
+                        <div class="rbp-info-box">
+                            <div class="rbp-info-label">Units to Remove</div>
+                            <div class="rbp-info-val rbp-qty">${qtyToClear}</div>
+                        </div>
+                    </div>
+                    <div class="rbp-field">
+                        <label class="rbp-label">Reason for Removal <span style="color:#ef4444;">*</span></label>
+                        <div class="rbp-reason-grid">
+                            <button class="rbp-reason-btn" data-reason="Expired Stock">🗓️ Expired Stock</button>
+                            <button class="rbp-reason-btn" data-reason="Damaged / Defective">💥 Damaged / Defective</button>
+                            <button class="rbp-reason-btn" data-reason="Stock Count Correction">📋 Stock Count Correction</button>
+                            <button class="rbp-reason-btn" data-reason="Sent as Sample">🎁 Sent as Sample</button>
+                            <button class="rbp-reason-btn" data-reason="Lost / Missing">❓ Lost / Missing</button>
+                            <button class="rbp-reason-btn" data-reason="Other">✏️ Other</button>
+                        </div>
+                    </div>
+                    <div class="rbp-field" id="rbp-custom-wrap" style="display:none;">
+                        <label class="rbp-label">Specify reason</label>
+                        <input type="text" id="rbp-custom-input" class="rbp-input" placeholder="Type your reason here..." maxlength="120">
+                    </div>
+                    <div class="rbp-field">
+                        <label class="rbp-label">Transaction Type</label>
+                        <div class="rbp-type-grid">
+                            <label class="rbp-type-opt">
+                                <input type="radio" name="rbp-type" value="MANUAL_DEDUCT" checked>
+                                <span class="rbp-type-label">
+                                    <span class="rbp-type-icon">🗂️</span>
+                                    <span><strong>Stock Adjustment</strong><small>Correction, expired, damaged, sample</small></span>
+                                </span>
+                            </label>
+                            <label class="rbp-type-opt">
+                                <input type="radio" name="rbp-type" value="OUTBOUND">
+                                <span class="rbp-type-label">
+                                    <span class="rbp-type-icon">📦</span>
+                                    <span><strong>Outbound / Fulfilled</strong><small>Manually fulfilled order or dispatch</small></span>
+                                </span>
+                            </label>
+                            <label class="rbp-type-opt">
+                                <input type="radio" name="rbp-type" value="DEFECT">
+                                <span class="rbp-type-label">
+                                    <span class="rbp-type-icon">⚠️</span>
+                                    <span><strong>Defect / Write-off</strong><small>Permanently unusable stock</small></span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="rbp-actions">
+                        <button id="rbp-cancel-btn" class="rbp-btn rbp-btn-cancel">Cancel</button>
+                        <button id="rbp-confirm-btn" class="rbp-btn rbp-btn-confirm" disabled>Confirm Remove</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            let selectedReason = '';
+            const confirmBtn = overlay.querySelector('#rbp-confirm-btn');
+            const customWrap = overlay.querySelector('#rbp-custom-wrap');
+            const customInput = overlay.querySelector('#rbp-custom-input');
+            const reasonBtns = overlay.querySelectorAll('.rbp-reason-btn');
+
+            const updateConfirmState = () => {
+                const reason = selectedReason === 'Other' ? customInput.value.trim() : selectedReason;
+                confirmBtn.disabled = !reason;
+                confirmBtn.textContent = reason ? `Confirm Remove — ${reason}` : 'Confirm Remove';
+            };
+
+            reasonBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    reasonBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedReason = btn.dataset.reason;
+                    customWrap.style.display = selectedReason === 'Other' ? 'block' : 'none';
+                    if (selectedReason !== 'Other') customInput.value = '';
+                    updateConfirmState();
+                });
+            });
+
+            customInput.addEventListener('input', updateConfirmState);
+            overlay.querySelector('#rbp-cancel-btn').addEventListener('click', () => overlay.remove());
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+            confirmBtn.addEventListener('click', async () => {
+                const finalReason = selectedReason === 'Other' ? customInput.value.trim() : selectedReason;
+                const transactionType = overlay.querySelector('input[name="rbp-type"]:checked').value;
+                if (!finalReason) return;
+
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'Removing...';
+                triggerBtn.disabled = true;
+
+                try {
+                    await AppDB.insertAdjustmentTyped(productName, -qtyToClear, expiry, finalReason, transactionType);
+                    overlay.remove();
+                    await this.loadInventory(true);
+                    this.renderModalBatches();
+                    this.updateCardStockDisplay(productName);
+                } catch (err) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Confirm Remove';
+                    triggerBtn.disabled = false;
+                    alert('Failed to remove batch: ' + err.message);
+                }
+            });
+        },
     };
 
     window._inventoryApp = app;

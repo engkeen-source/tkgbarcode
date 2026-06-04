@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS public.stock_ledger (
 ALTER TABLE public.stock_ledger DROP CONSTRAINT IF EXISTS stock_ledger_transaction_type_check;
 ALTER TABLE public.stock_ledger
     ADD CONSTRAINT stock_ledger_transaction_type_check
-    CHECK (transaction_type IN ('INBOUND', 'OUTBOUND', 'DEFECT', 'ADJUSTMENT', 'RETURN'));
-
+    CHECK (transaction_type IN ('INBOUND', 'OUTBOUND', 'DEFECT', 'ADJUSTMENT', 'RETURN', 'MANUAL_DEDUCT'));
+    
 -- 2. Create Orders Table
 CREATE TABLE IF NOT EXISTS public.orders (
     id TEXT PRIMARY KEY, -- e.g. "SHOP-12345" or "B2B-datetime"
