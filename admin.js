@@ -801,7 +801,8 @@ function handleSaveProduct() {
         barcodes,
         baseProduct,
         contents: type === 'single' ? [] : [...tempRecipe],
-        requireInnerScan: (type === 'giftbox') ? requireInner : false
+        // BUG FIX: Allow requireInnerScan for both 'bundle' and 'giftbox' types
+        requireInnerScan: (type !== 'single') ? requireInner : false
     };
 
     saveMasterSystem();
