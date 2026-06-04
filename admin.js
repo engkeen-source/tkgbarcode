@@ -302,9 +302,24 @@ function renderInventory() {
         return;
     }
 
+    // Capture currently open variant groups before overwriting the HTML
+    const openParents = new Set();
+    content.querySelectorAll('div[id^="grp-"]').forEach(el => {
+        if (el.style.display !== 'none') {
+            openParents.add(el.getAttribute('data-parent'));
+        }
+    });
+
     content.innerHTML = `
         <div style="display:flex; flex-direction:column; gap:1.5rem;">
-            ${parents.map((group, gIdx) => `
+            ${parents.map((group, gIdx) => {
+        // Check if this specific parent group was open
+        const parentNameEscaped = group.parent.name.replace(/"/g, '&quot;');
+        const isParentOpen = openParents.has(group.parent.name);
+        const displayStyle = isParentOpen ? 'flex' : 'none';
+        const btnText = isParentOpen ? '▼ Hide Variants' : '▶ Show Variants';
+
+        return `
                 <div style="background:var(--bg-card); border-radius:12px; border: 1px solid var(--border); overflow:hidden; transition: all 0.2s;">
                     <div class="p-card" style="margin:0; border:none; border-bottom: ${group.children.length > 0 ? '1px solid var(--border)' : 'none'}; border-radius:0; background:rgba(0,0,0,0.2);" onclick="editProduct('${group.parent.name.replace(/'/g, "\\'")}')">
                         <div style="flex:1;">
@@ -317,13 +332,13 @@ function renderInventory() {
                         <div style="display:flex; align-items:center; gap: 1rem;">
                             <span class="tag tag-${group.parent.type}">${group.parent.type}</span>
                             ${group.children.length > 0 ? `
-                                <button id="btn-grp-${gIdx}" onclick="window.toggleVariantGroup('btn-grp-${gIdx}', 'grp-${gIdx}', event)" style="background:var(--primary); color:white; border:none; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.8rem; min-width: 130px;">▶ Show Variants</button>
+                                <button id="btn-grp-${gIdx}" onclick="window.toggleVariantGroup('btn-grp-${gIdx}', 'grp-${gIdx}', event)" style="background:var(--primary); color:white; border:none; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.8rem; min-width: 130px;">${btnText}</button>
                             ` : ''}
                         </div>
                     </div>
 
                     ${group.children.length > 0 ? `
-                        <div id="grp-${gIdx}" style="display:none; flex-direction:column; background:rgba(255,255,255,0.01); padding: 1rem 2rem; gap: 0.75rem;">
+                        <div id="grp-${gIdx}" data-parent="${parentNameEscaped}" style="display:${displayStyle}; flex-direction:column; background:rgba(255,255,255,0.01); padding: 1rem 2rem; gap: 0.75rem;">
                             ${group.children.map(child => `
                                 <div style="display:flex; justify-content:space-between; align-items:center; padding: 0.75rem 1rem; background:rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius:8px; cursor:pointer;" onclick="editProduct('${child.name.replace(/'/g, "\\'")}')">
                                     <div>
@@ -336,7 +351,8 @@ function renderInventory() {
                         </div>
                     ` : ''}
                 </div>
-            `).join('')}
+                `;
+    }).join('')}
         </div>
     `;
 }

@@ -146,13 +146,16 @@ const BUNDLE_CATALOG = {
                 { name: "BBQ Chicken Corn Stick", count: 1, barcodes: PRODUCT_DB["yumi bbq chicken corn stick"] },
                 { name: "Cheese Corn Stick", count: 1, barcodes: PRODUCT_DB["yumi cheese corn stick"] }
             ]
-        },
-        "yumi corn curls assorted flavours (bundle of 9/15/30/48) bundle of 30": {
+        }
+    },
+    "Corn Curls Bundles": {
+        // --- ASSORTED FLAVOURS ---
+        "yumi corn curls assorted flavours (bundle of 9/15/30/48) bundle of 9": {
             type: "bundle",
             contents: [
-                { name: "Yumi Squid Corn Curls", count: 10, barcodes: PRODUCT_DB["yumi squid corn curls"] },
-                { name: "Yumi Cheese Corn Curls", count: 10, barcodes: PRODUCT_DB["yumi cheese corn curls"] },
-                { name: "Yumi BBQ Corn Curls", count: 10, barcodes: PRODUCT_DB["yumi bbq corn curls"] }
+                { name: "Yumi Squid Corn Curls", count: 3, barcodes: PRODUCT_DB["yumi squid corn curls"] },
+                { name: "Yumi Cheese Corn Curls", count: 3, barcodes: PRODUCT_DB["yumi cheese corn curls"] },
+                { name: "Yumi BBQ Corn Curls", count: 3, barcodes: PRODUCT_DB["yumi bbq corn curls"] }
             ]
         },
         "yumi corn curls assorted flavours (bundle of 9/15/30/48) bundle of 15": {
@@ -162,6 +165,52 @@ const BUNDLE_CATALOG = {
                 { name: "Yumi Cheese Corn Curls", count: 5, barcodes: PRODUCT_DB["yumi cheese corn curls"] },
                 { name: "Yumi BBQ Corn Curls", count: 5, barcodes: PRODUCT_DB["yumi bbq corn curls"] }
             ]
+        },
+        "yumi corn curls assorted flavours (bundle of 9/15/30/48) bundle of 30": {
+            type: "bundle",
+            contents: [
+                { name: "Yumi Squid Corn Curls", count: 10, barcodes: PRODUCT_DB["yumi squid corn curls"] },
+                { name: "Yumi Cheese Corn Curls", count: 10, barcodes: PRODUCT_DB["yumi cheese corn curls"] },
+                { name: "Yumi BBQ Corn Curls", count: 10, barcodes: PRODUCT_DB["yumi bbq corn curls"] }
+            ]
+        },
+        "yumi corn curls assorted flavours (bundle of 9/15/30/48) bundle of 48": {
+            type: "bundle",
+            contents: [
+                { name: "Yumi Squid Corn Curls", count: 16, barcodes: PRODUCT_DB["yumi squid corn curls"] },
+                { name: "Yumi Cheese Corn Curls", count: 16, barcodes: PRODUCT_DB["yumi cheese corn curls"] },
+                { name: "Yumi BBQ Corn Curls", count: 16, barcodes: PRODUCT_DB["yumi bbq corn curls"] }
+            ]
+        },
+
+        // --- CHEESE SINGLE FLAVOUR ---
+        "yumi cheese corn curls bundle of 15": {
+            type: "bundle",
+            contents: [{ name: "Yumi Cheese Corn Curls", count: 15, barcodes: PRODUCT_DB["yumi cheese corn curls"] }]
+        },
+        "yumi cheese corn curls bundle of 30": {
+            type: "bundle",
+            contents: [{ name: "Yumi Cheese Corn Curls", count: 30, barcodes: PRODUCT_DB["yumi cheese corn curls"] }]
+        },
+
+        // --- BBQ SINGLE FLAVOUR ---
+        "yumi bbq corn curls bundle of 15": {
+            type: "bundle",
+            contents: [{ name: "Yumi BBQ Corn Curls", count: 15, barcodes: PRODUCT_DB["yumi bbq corn curls"] }]
+        },
+        "yumi bbq corn curls bundle of 30": {
+            type: "bundle",
+            contents: [{ name: "Yumi BBQ Corn Curls", count: 30, barcodes: PRODUCT_DB["yumi bbq corn curls"] }]
+        },
+
+        // --- SQUID SINGLE FLAVOUR ---
+        "yumi squid corn curls bundle of 15": {
+            type: "bundle",
+            contents: [{ name: "Yumi Squid Corn Curls", count: 15, barcodes: PRODUCT_DB["yumi squid corn curls"] }]
+        },
+        "yumi squid corn curls bundle of 30": {
+            type: "bundle",
+            contents: [{ name: "Yumi Squid Corn Curls", count: 30, barcodes: PRODUCT_DB["yumi squid corn curls"] }]
         }
     },
     "Snack Monsters (8x65g)": {
