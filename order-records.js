@@ -206,7 +206,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     return row.notes === 'Manual New Batch';
                 }
                 if (row.transaction_type === 'OUTBOUND') {
-                    return false;
+                    // Allow manual outbound removals from the remove batch popup
+                    // These are legitimate fulfilled orders recorded manually
+                    return true;
                 }
             }
 

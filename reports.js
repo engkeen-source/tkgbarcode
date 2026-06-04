@@ -140,11 +140,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (row.transaction_type === 'DEFECT') this.productStats[name].defects += qty;
                     // RETURN = restocked item coming back into stock — counts as inbound
                     if (row.transaction_type === 'RETURN') this.productStats[name].inbound += qty;
-                    // MANUAL_DEDUCT = manual × button removal — counts as outbound
-                    if (row.transaction_type === 'MANUAL_DEDUCT') this.productStats[name].outbound += qty;
+                    // MANUAL_DEDUCT = stock adjustment removals (expired, lost, sample, correction)
+                    // NOT counted as outbound sales — these are internal stock corrections only
+                    // When user picks "Outbound / Fulfilled" in the popup, it writes OUTBOUND directly
+                    // When user picks "Defect / Write-off" in the popup, it writes DEFECT directly
+                    // MANUAL_DEDUCT is only written when "Stock Adjustment" is selected
                     if (row.transaction_type === 'ADJUSTMENT') {
                         if (qty > 0) this.productStats[name].inbound += qty;
-                        else this.productStats[name].outbound += Math.abs(qty);
+                        // Negative adjustments are stock corrections, not outbound sales — excluded
                     }
                     // SYSTEM_ROLLUP = entries written after ledger rollup — treat as inbound baseline
                     if (row.transaction_type === 'INBOUND' && row.reference_id === 'SYSTEM_ROLLUP') {
