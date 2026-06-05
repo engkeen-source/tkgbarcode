@@ -45,28 +45,48 @@ const PRODUCT_CATALOG = {
         "chicken floss 65g": { type: "single", barcodes: ["793618011949"], image: "images/65gProducts/CF65G.png" },
         "fish head curry 65g": { type: "single", barcodes: ["793591857091"], image: "images/65gProducts/FHC65G.png" }
     },
-    "Poppa": {
-        "poppa salted caramel": { type: "single", barcodes: ["796548081457"], image: "images/Poppa/SCPoppa.webp" },
-        "poppa chocolate popcorn": { type: "single", barcodes: ["796548081464"], image: "images/Poppa/CHCPP.webp" }
+
+    "Corn Sticks": {
+        "yumi cheese corn stick": { type: "single", barcodes: ["754590720458"], image: "images/CornStick/yumicheesecornstick.png" },
+        "yumi bbq chicken corn stick": { type: "single", barcodes: ["754590832809"], image: "images/CornStick/yumibqqcornstick.png" },
+        "yumi original corn stick": { type: "single", barcodes: ["754590720472"], image: "images/CornStick/yumioriginalcornstick.png" }
+    },
+
+    "Bronys": {
+        "brownie crisps (108g) banana fritter": { type: "single", barcodes: ["796548081884"], image: "images/Bronys/BronyBAN108G.jpg" },
+        "brownie crisps (108g) chocolate chip": { type: "single", barcodes: ["796548081860"], image: "images/Bronys/BronyCHC108G.jpg" },
+        "brownie crisps (108g) peanut pancake": { type: "single", barcodes: ["796548081877"], image: "images/Bronys/BronyPP108G.jpg" },
+        "brownie crisps (108g) caramelised biscuit": { type: "single", barcodes: [], image: "images/Bronys/BronyCAB108G.jpg" },
+        "brownie crisps (108g) white coffee": { type: "single", barcodes: [], image: "images/Bronys/BronyWC108G.jpg" },
+        "brownie crisps (108g) sea salt chocolate chip": { type: "single", barcodes: [], image: "images/Bronys/BronySSCHC108G.jpg" },
+        "brownie crisps (35g) matcha": { type: "single", barcodes: ["796548081150"], image: "images/Bronys/BronyMATCHA35G.jpg" },
     },
     "Corn Curls": {
         "yumi squid corn curls": { type: "single", barcodes: ["796548081587"], image: "images/CornCurls/yumiCCSquid.jpg" },
         "yumi bbq corn curls": { type: "single", barcodes: ["796548081570"], image: "images/CornCurls/yumiCCbbq.jpg" },
         "yumi cheese corn curls": { type: "single", barcodes: ["796548081563"], image: "images/CornCurls/yumiCCCheese.jpg" }
     },
-    "Corn Sticks": {
-        "yumi cheese corn stick": { type: "single", barcodes: ["754590720458"], image: "images/CornStick/yumicheesecornstick.png" },
-        "yumi bbq chicken corn stick": { type: "single", barcodes: ["754590832809"], image: "images/CornStick/yumibqqcornstick.png" },
-        "yumi original corn stick": { type: "single", barcodes: ["754590720472"], image: "images/CornStick/yumioriginalcornstick.png" }
+    "Poppa": {
+        "poppa salted caramel": { type: "single", barcodes: ["796548081457"], image: "images/Poppa/SCPoppa.webp" },
+        "poppa chocolate": { type: "single", barcodes: ["796548081464"], image: "images/Poppa/CHCPP.webp" },
+        "poppa cheese corn puffs": { type: "single", barcodes: [], image: "images/Poppa/PoppaCheese.jpg" },
+        "poppa original corn puffs": { type: "single", barcodes: [], image: "images/Poppa/PoppaOriginal.jpg" },
+        "poppa toffee corn puffs": { type: "single", barcodes: [], image: "images/Poppa/PoppaToffee.jpg" }
     },
-    "Bronys": {
-        "brownie crisps (108g) banana fritter": { type: "single", barcodes: ["796548081884"], image: "images/Bronys/BronyBAN108G.jpg" },
-        "brownie crisps (108g) chocolate chip": { type: "single", barcodes: ["796548081860"], image: "images/Bronys/BronyCHC108G.jpg" },
-        "brownie crisps (108g) peanut pancake": { type: "single", barcodes: ["796548081877"], image: "images/Bronys/BronyPP108G.jpg" },
-        "brownie crisps (35g) matcha": { type: "single", barcodes: ["796548081150"], image: "images/Bronys/BronyMATCHA35G.jpg" },
+    "Nutkins": {
+        "nutkins honey roasted": { type: "single", barcodes: [], image: "images/Nutkins/NutkinsHoneyRoasted.jpg" },
+        "nutkins thai lime & chili": { type: "single", barcodes: [], image: "images/Nutkins/NutkinsThaiLime.jpg" }
     },
-    "Merchandise": {
-        "the kettle gourmet limited edition chinese new year ang pow (1pack 5pcs)": { type: "single", barcodes: ["meowmeow"], image: "" }
+    "Crispy Cone": {
+        "crispy cone cheeky chicky": { type: "single", barcodes: ["796548081044"], image: "images/CrispyCones/CrispyConeCheekyChicky.png" },
+        "crispy cone marvelous mayo": { type: "single", barcodes: ["796548081037"], image: "images/CrispyCones/CrispyConeMarvelousMayo.png" },
+        "crispy cone witty wheat": { type: "single", barcodes: ["796548081020"], image: "images/CrispyCones/CrispyConeWittyWheat.png" }
+    },
+    "Krumbly": {
+        "krumbly hyper hazelnut": { type: "single", barcodes: ["796548081495"], image: "images/Krumbly/Krumblyhyperhazelnut.jpg" },
+        "krumbly crazy chocolate": { type: "single", barcodes: ["796548081501"], image: "images/Krumbly/Krumblycrazychoco.jpg" },
+        "krumbly cheeky cheese": { type: "single", barcodes: ["796548081518"], image: "images/Krumbly/Krumblycheekycheese.jpg" },
+        "krumbly pesky peanut": { type: "single", barcodes: ["796548081518"], image: "images/Krumbly/Krumblypeskypeanut.jpg" },
     },
     "Gift Box Barcodes": {
         "valentine's day gift box": { type: "gift_box", barcodes: ["754590263719"], image: "images/Giftbox" },
@@ -82,6 +102,24 @@ const PRODUCT_CATALOG = {
         "The Kettle Gourmet CNY HUAT Gift Set (8packs x 30g Popcorn) Red Dragon (红中)": { type: "gift_box", barcodes: ["796548081723"], image: "" },
         "The Kettle Gourmet CNY HUAT Gift Set (8packs x 30g Popcorn) White Dragon (白板)": { type: "gift_box", barcodes: ["796548081730"], image: "" }
     },
+    "Sleeves": {
+        "happy birthday sleeve": { type: "single", barcodes: ["796548081747"], image: "images/Sleeves/happybirthday.jpg" },
+        "christmas sleeve": { type: "single", barcodes: ["796548081754"], image: "images/Sleeves/christmas.jpg" },
+        "happy teacher's day sleeve": { type: "single", barcodes: ["796548081341"], image: "images/Sleeves/teachersday.jpg" },
+        "National Day sleeve": { type: "single", barcodes: ["754590832885"], image: "images/Sleeves/nationalday.jpg" },
+        "Spongebob sleeve": { type: "single", barcodes: ["754590832878"], image: "images/Sleeves/spongebob.jpg" },
+        "Minions sleeve": { type: "single", barcodes: ["796548081525"], image: "images/Sleeves/minions.jpg" },
+        "christmas assorted sleeve": { type: "single", barcodes: ["754590263696"], image: "images/Sleeves/christmasassorted.jpg" },
+        "brony christmas sleeve": { type: "single", barcodes: ["796548081235"], image: "images/Sleeves/bronychristmas.jpg" },
+        "children's day sleeve": { type: "single", barcodes: ["796548081365"], image: "images/Sleeves/childrensday.jpg" },
+        "pokemon sleeve": { type: "single", barcodes: ["794712851806"], image: "images/Sleeves/pokemon.jpg" },
+        "hari raya 2026 sleeve": { type: "single", barcodes: ["724022270561"], image: "images/Sleeves/hariraya2026.jpg" },
+        "hari raya old sleeve": { type: "single", barcodes: ["754590720489"], image: "images/Sleeves/harirayaold.jpg" },
+        "cny green dragon sleeve": { type: "single", barcodes: ["796548081716"], image: "images/Sleeves/cnygreendragon.jpg" },
+        "cny red dragon sleeve": { type: "single", barcodes: ["796548081723"], image: "images/Sleeves/cnyreddragon.jpg" },
+        "cny white dragon sleeve": { type: "single", barcodes: ["796548081730"], image: "images/Sleeves/cnywhitedragon.jpg" }
+    },
+
 };
 
 // --- 2. GROUPS ---
