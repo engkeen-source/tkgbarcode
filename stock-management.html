@@ -1398,7 +1398,7 @@
             try {
                 for (const item of scanned) {
                     if (item.name && item.name !== "Unknown Product") {
-                        await window.AppDB.insertInbound({ product: item.name, qty: item.qty, expiry: item.expiry || null, notes: "Manual Warehouse Inbound" });
+                        await window.AppDB.insertInbound([{ name: item.name, qty: item.qty, expiry: item.expiry || null }]);
                     }
                 }
                 alert("🚀 Stock successfully synced to Cloud Ledger!");

@@ -261,8 +261,8 @@
       try {
         const dbProducts = await window.AppDB.getProducts();
         if (dbProducts && Object.keys(dbProducts).length > 0) {
-           localProducts = dbProducts;
-           console.log("Loaded native DB catalog.");
+          localProducts = dbProducts;
+          console.log("Loaded native DB catalog.");
         }
       } catch (e) {
         console.error("Failed to load native DB catalog", e);
@@ -449,12 +449,7 @@
         // Submit each scanned item to the Cloud Ledger
         for (const item of scanned) {
           if (item.name && item.name !== "Unknown Product") {
-            await window.AppDB.insertInbound({
-              product: item.name,
-              qty: item.qty,
-              expiry: item.expiry || null,
-              notes: "Manual Warehouse Inbound"
-            });
+            await window.AppDB.insertInbound([{ name: item.name, qty: item.qty, expiry: item.expiry || null }]);
           }
         }
 

@@ -525,33 +525,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     let expiry = target.dataset.expiry || '';
                     const isPlus = target.classList.contains('plus-btn');
 
-                    target.disabled = true;
-                    try {
-                        const resolved = this.resolveRowExpiry(row, expiry);
-                        if (resolved === null) {
-                            target.disabled = false;
-                            return;
-                        }
-                        expiry = resolved;
+                    const resolved = this.resolveRowExpiry(row, expiry);
+                    if (resolved === null) return;
+                    expiry = resolved;
 
-                        if (isPlus) {
-                            await AppDB.insertAdjustment(this.currentModalProduct, 1, expiry, "Manual +1 Edit");
-                        } else {
-                            // Read live qty from in-memory inventory data, NOT the DOM input.
-                            // The DOM may be stale if another tab made changes since the modal opened.
-                            const liveBatches = this.inventory[this.currentModalProduct] || [];
-                            const liveBatch = liveBatches.find(b => (b.expiry || '') === (expiry || ''));
-                            const liveQty = liveBatch ? liveBatch.qty : 0;
-                            if (liveQty > 0) {
-                                await AppDB.insertAdjustment(this.currentModalProduct, -1, expiry, "Manual -1 Edit");
-                            }
-                        }
-                        await this.loadInventory(true); // refresh data only, no full grid re-render
-                        this.renderModalBatches();
-                        this.updateCardStockDisplay(this.currentModalProduct);
-                    } catch (err) {
-                        alert("Failed to adjust stock: " + err.message);
-                        this.renderModalBatches(); // reset 
+                    const liveBatches = this.inventory[this.currentModalProduct] || [];
+                    const liveBatch = liveBatches.find(b => (b.expiry || '') === (expiry || ''));
+                    const liveQty = liveBatch ? liveBatch.qty : 0;
+
+                    if (isPlus) {
+                        this.showAdjustPopup({
+                            productName: this.currentModalProduct,
+                            expiry,
+                            isAddition: true,
+                            currentQty: liveQty,
+                            triggerBtn: target
+                        });
+                    } else {
+                        if (liveQty <= 0) return;
+                        this.showAdjustPopup({
+                            productName: this.currentModalProduct,
+                            expiry,
+                            isAddition: false,
+                            currentQty: liveQty,
+                            triggerBtn: target
+                        });
                     }
                 }
             });
@@ -642,22 +640,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         expiry = resolved;
                     }
 
-                    if (!confirm(`Set stock to ${newQty} (${delta > 0 ? '+' : ''}${delta} adjustment)?`)) {
-                        target.value = originalQty;
-                        return;
-                    }
-
-                    target.disabled = true;
-                    try {
-                        await AppDB.insertAdjustment(this.currentModalProduct, delta, expiry, 'Manual Direct Edit');
-                        await this.loadInventory(true);
-                        this.renderModalBatches();
-                        this.updateCardStockDisplay(this.currentModalProduct);
-                    } catch (err) {
-                        alert('Failed to update stock: ' + err.message);
-                        target.value = originalQty;
-                        target.disabled = false;
-                    }
+                    this.showAdjustPopup({
+                        productName: this.currentModalProduct,
+                        expiry,
+                        isAddition: delta > 0,
+                        currentQty: parseInt(target.dataset.originalQty) || 0,
+                        delta: Math.abs(delta),
+                        triggerBtn: target,
+                        onCancel: () => { target.value = originalQty; }
+                    });
                 }
             });
 
@@ -886,6 +877,250 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         },
+
+        showAdjustPopup({ productName, expiry, isAddition, currentQty, delta = 1, triggerBtn, onCancel }) {
+            const existing = document.getElementById('adjust-popup-overlay');
+            if (existing) existing.remove();
+
+            const displayExpiry = expiry
+                ? new Date(expiry).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : 'No expiry date';
+
+            const overlay = document.createElement('div');
+            overlay.id = 'adjust-popup-overlay';
+            overlay.style.cssText = `
+                position:fixed; inset:0; background:rgba(0,0,0,0.7);
+                display:flex; align-items:center; justify-content:center;
+                z-index:9999; padding:1rem; backdrop-filter:blur(4px);
+                animation: rbpFadeIn 0.15s ease;
+            `;
+
+            const actionLabel = isAddition ? 'Add Stock' : 'Deduct Stock';
+            const actionIcon = isAddition ? '➕' : '➖';
+            const actionColor = isAddition ? '#10b981' : '#ef4444';
+
+            overlay.innerHTML = `
+                <div style="
+                    background:var(--bg-card, #1e293b);
+                    border:1px solid rgba(255,255,255,0.1);
+                    border-radius:16px; padding:1.5rem;
+                    width:100%; max-width:440px;
+                    max-height:90vh; overflow-y:auto;
+                    animation: rbpSlideUp 0.2s ease;
+                ">
+                    <div class="rbp-header">
+                        <div class="rbp-icon">${actionIcon}</div>
+                        <div>
+                            <div class="rbp-title">${actionLabel}</div>
+                            <div class="rbp-subtitle">${productName}</div>
+                        </div>
+                    </div>
+
+                    <div class="rbp-info-row">
+                        <div class="rbp-info-box">
+                            <div class="rbp-info-label">Batch Expiry</div>
+                            <div class="rbp-info-val">${displayExpiry}</div>
+                        </div>
+                        <div class="rbp-info-box">
+                            <div class="rbp-info-label">Current Stock</div>
+                            <div class="rbp-info-val" style="color:#3b82f6;">${currentQty}</div>
+                        </div>
+                    </div>
+
+                    <div class="rbp-field">
+                        <label class="rbp-label">Quantity to ${isAddition ? 'Add' : 'Deduct'} <span style="color:#ef4444;">*</span></label>
+                        <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.5rem;">
+                            <button id="adj-minus-btn" style="
+                                width:36px; height:36px; border-radius:8px; border:none;
+                                background:rgba(255,255,255,0.08); color:white;
+                                font-size:1.2rem; cursor:pointer;
+                            ">−</button>
+                            <input type="number" id="adj-qty-input" value="${delta}" min="1" style="
+                                width:80px; text-align:center; padding:0.5rem;
+                                border-radius:8px; border:1px solid rgba(255,255,255,0.15);
+                                background:rgba(255,255,255,0.05); color:white;
+                                font-size:1.1rem; font-weight:700;
+                            ">
+                            <button id="adj-plus-btn" style="
+                                width:36px; height:36px; border-radius:8px; border:none;
+                                background:rgba(255,255,255,0.08); color:white;
+                                font-size:1.2rem; cursor:pointer;
+                            ">+</button>
+                            <span style="font-size:0.85rem; color:var(--text-secondary);">units</span>
+                        </div>
+                        <div id="adj-stock-preview" style="margin-top:0.5rem; font-size:0.82rem; color:var(--text-secondary);">
+                            Stock after ${isAddition ? 'addition' : 'deduction'}:
+                            <strong style="color:${actionColor};">${isAddition ? currentQty + delta : Math.max(0, currentQty - delta)}</strong>
+                        </div>
+                    </div>
+
+                    <div class="rbp-field">
+                        <label class="rbp-label">Reason <span style="color:#ef4444;">*</span></label>
+                        <div class="rbp-reason-grid">
+                            ${isAddition ? `
+                                <button class="rbp-reason-btn" data-reason="Stock Count Correction">📋 Stock Count Correction</button>
+                                <button class="rbp-reason-btn" data-reason="Returned Stock">🔄 Returned Stock</button>
+                                <button class="rbp-reason-btn" data-reason="Found / Located">🔍 Found / Located</button>
+                                <button class="rbp-reason-btn" data-reason="Other">✏️ Other</button>
+                            ` : `
+                                <button class="rbp-reason-btn" data-reason="Expired Stock">🗓️ Expired Stock</button>
+                                <button class="rbp-reason-btn" data-reason="Damaged / Defective">💥 Damaged / Defective</button>
+                                <button class="rbp-reason-btn" data-reason="Stock Count Correction">📋 Stock Count Correction</button>
+                                <button class="rbp-reason-btn" data-reason="Sent as Sample">🎁 Sent as Sample</button>
+                                <button class="rbp-reason-btn" data-reason="Lost / Missing">❓ Lost / Missing</button>
+                                <button class="rbp-reason-btn" data-reason="Other">✏️ Other</button>
+                            `}
+                        </div>
+                    </div>
+
+                    <div class="rbp-field" id="adj-custom-wrap" style="display:none;">
+                        <label class="rbp-label">Specify reason</label>
+                        <input type="text" id="adj-custom-input" class="rbp-input"
+                            placeholder="Type your reason here..." maxlength="120">
+                    </div>
+
+                    ${!isAddition ? `
+                    <div class="rbp-field">
+                        <label class="rbp-label">Transaction Type</label>
+                        <div class="rbp-type-grid">
+                            <label class="rbp-type-opt">
+                                <input type="radio" name="adj-type" value="MANUAL_DEDUCT" checked>
+                                <span class="rbp-type-label">
+                                    <span class="rbp-type-icon">🗂️</span>
+                                    <span><strong>Stock Adjustment</strong><small>Correction, expired, damaged, sample</small></span>
+                                </span>
+                            </label>
+                            <label class="rbp-type-opt">
+                                <input type="radio" name="adj-type" value="OUTBOUND">
+                                <span class="rbp-type-label">
+                                    <span class="rbp-type-icon">📦</span>
+                                    <span><strong>Outbound / Fulfilled</strong><small>Manually fulfilled order or dispatch</small></span>
+                                </span>
+                            </label>
+                            <label class="rbp-type-opt">
+                                <input type="radio" name="adj-type" value="DEFECT">
+                                <span class="rbp-type-label">
+                                    <span class="rbp-type-icon">⚠️</span>
+                                    <span><strong>Defect / Write-off</strong><small>Permanently unusable stock</small></span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="rbp-actions">
+                        <button id="adj-cancel-btn" class="rbp-btn rbp-btn-cancel">Cancel</button>
+                        <button id="adj-confirm-btn" class="rbp-btn rbp-btn-confirm" disabled
+                            style="background:${actionColor};">
+                            Confirm ${actionLabel}
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            let selectedReason = '';
+            const qtyInput = overlay.querySelector('#adj-qty-input');
+            const preview = overlay.querySelector('#adj-stock-preview');
+            const confirmBtn = overlay.querySelector('#adj-confirm-btn');
+            const customWrap = overlay.querySelector('#adj-custom-wrap');
+            const customInput = overlay.querySelector('#adj-custom-input');
+            const reasonBtns = overlay.querySelectorAll('.rbp-reason-btn');
+
+            const updatePreview = () => {
+                const qty = Math.max(1, parseInt(qtyInput.value) || 1);
+                if (isAddition) {
+                    preview.innerHTML = `Stock after addition: <strong style="color:#10b981;">${currentQty + qty}</strong>`;
+                } else {
+                    preview.innerHTML = `Stock after deduction: <strong style="color:#ef4444;">${Math.max(0, currentQty - qty)}</strong>`;
+                }
+            };
+
+            const updateConfirm = () => {
+                const reason = selectedReason === 'Other'
+                    ? (customInput ? customInput.value.trim() : '')
+                    : selectedReason;
+                confirmBtn.disabled = !reason;
+                confirmBtn.textContent = reason
+                    ? `Confirm ${actionLabel} — ${reason}`
+                    : `Confirm ${actionLabel}`;
+            };
+
+            overlay.querySelector('#adj-minus-btn').addEventListener('click', () => {
+                qtyInput.value = Math.max(1, (parseInt(qtyInput.value) || 1) - 1);
+                updatePreview();
+                updateConfirm();
+            });
+
+            overlay.querySelector('#adj-plus-btn').addEventListener('click', () => {
+                const max = isAddition ? 99999 : currentQty;
+                qtyInput.value = Math.min(max, (parseInt(qtyInput.value) || 1) + 1);
+                updatePreview();
+                updateConfirm();
+            });
+
+            qtyInput.addEventListener('input', () => { updatePreview(); updateConfirm(); });
+
+            reasonBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    reasonBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedReason = btn.dataset.reason;
+                    if (customWrap) customWrap.style.display = selectedReason === 'Other' ? 'block' : 'none';
+                    if (customInput && selectedReason !== 'Other') customInput.value = '';
+                    updateConfirm();
+                });
+            });
+
+            if (customInput) customInput.addEventListener('input', updateConfirm);
+
+            overlay.querySelector('#adj-cancel-btn').addEventListener('click', () => {
+                overlay.remove();
+                if (onCancel) onCancel();
+            });
+
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                    if (onCancel) onCancel();
+                }
+            });
+
+            confirmBtn.addEventListener('click', async () => {
+                const finalReason = selectedReason === 'Other'
+                    ? (customInput ? customInput.value.trim() : '')
+                    : selectedReason;
+                const qty = Math.max(1, parseInt(qtyInput.value) || 1);
+                const transactionType = isAddition
+                    ? 'ADJUSTMENT'
+                    : (overlay.querySelector('input[name="adj-type"]:checked')?.value || 'MANUAL_DEDUCT');
+
+                if (!finalReason) return;
+
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'Saving...';
+                if (triggerBtn) triggerBtn.disabled = true;
+
+                try {
+                    if (isAddition) {
+                        await AppDB.insertAdjustment(productName, qty, expiry, finalReason);
+                    } else {
+                        await AppDB.insertAdjustmentTyped(productName, -qty, expiry, finalReason, transactionType);
+                    }
+                    overlay.remove();
+                    await this.loadInventory(true);
+                    this.renderModalBatches();
+                    this.updateCardStockDisplay(productName);
+                } catch (err) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = `Confirm ${actionLabel}`;
+                    if (triggerBtn) triggerBtn.disabled = false;
+                    alert('Failed to adjust stock: ' + err.message);
+                }
+            });
+        },
+
     };
 
     window._inventoryApp = app;
