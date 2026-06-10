@@ -622,6 +622,7 @@ function exportBackup() {
 
 // --- MODAL & EDITING ---
 function openNewProductModal() {
+    tempRecipe = [];
     showModal("Create New Product", renderProductForm());
 }
 
@@ -742,12 +743,42 @@ function removeRecipeItem(idx) {
 function renderRecipeItems() {
     const list = document.getElementById('visual-recipe-list');
     if (!list) return;
+
     list.innerHTML = tempRecipe.map((item, idx) => `
         <div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border);">
-            <span style="font-size:0.9rem;">${item.name} <b style="color:var(--accent); margin-left:0.5rem;">x${item.count}</b></span>
-            <button onclick="removeRecipeItem(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer;">✕</button>
+            <div style="font-size:0.9rem; display:flex; align-items:center; gap:8px;">
+                <span>${item.name}</span>
+                
+                <div style="display:flex; align-items:center; background:rgba(59,130,246,0.1); border-radius:4px; padding:2px 4px; transition: 0.2s; border: 1px solid transparent;"
+                     onmouseover="this.style.background='rgba(59,130,246,0.2)'"
+                     onmouseout="this.style.background='rgba(59,130,246,0.1)'"
+                     onfocusin="this.style.borderColor='var(--accent)'; this.style.background='rgba(0,0,0,0.3)'"
+                     onfocusout="this.style.borderColor='transparent'">
+                    <span style="color:var(--accent); font-weight:700; margin-left: 2px;">x</span>
+                    <input type="number" 
+                           value="${item.count}" 
+                           min="1" 
+                           onchange="updateRecipeItemQty(${idx}, this.value)"
+                           onclick="this.select()"
+                           style="background:transparent; border:none; color:var(--accent); font-weight:700; width:45px; outline:none; font-family:inherit; padding-left:2px; cursor:text;">
+                </div>
+                
+            </div>
+            <button onclick="removeRecipeItem(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:1.1rem; padding:0 4px;">✕</button>
         </div>
     `).join('');
+}
+
+// New function to handle the quantity update in the temporary state
+window.updateRecipeItemQty = function (idx, newQty) {
+    const qty = parseInt(newQty, 10);
+    if (qty > 0) {
+        tempRecipe[idx].count = qty;
+    } else {
+        // If they type 0 or a negative number, force it back to 1
+        tempRecipe[idx].count = 1;
+        renderRecipeItems();
+    }
 }
 
 function handleDeleteProduct(name) {

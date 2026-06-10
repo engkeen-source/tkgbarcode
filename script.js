@@ -569,6 +569,9 @@ const app = {
         for (const row of rows) {
             const str = row.join(' ').toLowerCase();
             if (str.includes('order id') && str.includes('tracking number')) return 'shopee';
+            // Shopee-specific headers that never appear in Lazada exports
+            if (str.includes('product name') && str.includes('variation name')) return 'shopee';
+            if (str.includes('shipment method')) return 'shopee';
         }
 
         // 4. Fallback: Check dimensions. Lazada usually uses deep columns (AZ, BA, BG).
@@ -646,9 +649,19 @@ const app = {
                 nameLower === 'seller sku'
             ) return;
 
-            let shipper = 'Other';
-            if (rawAwb.toUpperCase().startsWith('LZSGD')) {
+            let shipper = 'Shopee';
+            const awbUpper = rawAwb.toUpperCase();
+            if (awbUpper.startsWith('LZSGD')) {
                 shipper = 'SpeedPost';
+            } else if (awbUpper.startsWith('SPX') || awbUpper.startsWith('SPXSG')) {
+                shipper = 'SPX';
+            } else if (
+                awbUpper.startsWith('SHHPM') ||
+                awbUpper.startsWith('SHPM') ||
+                awbUpper.startsWith('NINJA') ||
+                awbUpper.startsWith('NVSG')
+            ) {
+                shipper = 'NinjaVan';
             }
 
             if (!ordersMap.has(id)) {
@@ -658,6 +671,7 @@ const app = {
                     orderId: orderId,
                     lineItems: [],
                     status: 'Pending',
+                    platform: 'shopee',
                     shipper: shipper
                 });
             }
@@ -1038,7 +1052,11 @@ const app = {
         const shipper = this.normalizeText(order && order.shipper);
         const idToken = this.normalizeText(order && (order.awb || order.orderId || order.id));
 
-        if (shipper.includes('ninja') || idToken.startsWith('shhpm') || idToken.startsWith('shpm') || idToken.startsWith('ninja')) {
+        if (
+            shipper.includes('ninja') || shipper.includes('ninjavan') ||
+            idToken.startsWith('shhpm') || idToken.startsWith('shpm') ||
+            idToken.startsWith('ninja') || idToken.startsWith('nvsg')
+        ) {
             return 'ninjavan';
         }
 
@@ -1048,6 +1066,14 @@ const app = {
 
         if (shipper.includes('speedpost') || shipper.includes('singpost')) {
             if (idToken.startsWith('lz')) return 'lazada';
+        }
+
+        // If the platform is known to be Shopee, don't fall to 'other' --
+        // bucket by shipper name directly, or default to SPX (most common).
+        const resolvedPlatform = this.derivePlatform(order);
+        if (resolvedPlatform === 'shopee' || (order && order.platform === 'shopee')) {
+            if (shipper.includes('ninja') || shipper.includes('ninjavan')) return 'ninjavan';
+            return 'spx'; // Shopee default carrier
         }
 
         return 'other';
